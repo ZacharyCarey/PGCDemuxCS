@@ -1,5 +1,8 @@
-public enum RegionType
+namespace PgcDemuxCS
 {
-    NTSC = 0,
-    PAL = 1
+    public enum RegionType
+    {
+        NTSC = 0,
+        PAL = 1
+    }
 }

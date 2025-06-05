@@ -1,5 +1,8 @@
-public enum DomainType
+namespace PgcDemuxCS
 {
-    Menus = 0,
-    Titles = 1
+    public enum DomainType
+    {
+        Menus = 0,
+        Titles = 1
+    }
 }

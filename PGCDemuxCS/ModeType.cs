@@ -1,7 +1,9 @@
-
-public enum ModeType
+namespace PgcDemuxCS
 {
-    PGC = 0,
-    VID = 1,
-    CID = 2
+    public enum ModeType
+    {
+        PGC = 0,
+        VID = 1,
+        CID = 2
+    }
 }
