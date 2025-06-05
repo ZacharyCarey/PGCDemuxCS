@@ -586,19 +586,5 @@ namespace PgcDemuxCS
 
 
         }
-
-        public static bool _stati64(string path, out FileInfo result)
-        {
-            try
-            {
-                result = new FileInfo(path);
-                return File.Exists(path);
-            }
-            catch (Exception)
-            {
-                result = null;
-                return false;
-            }
-        }
     }
 }

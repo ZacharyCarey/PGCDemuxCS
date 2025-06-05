@@ -11,6 +11,7 @@ namespace PgcDemuxCS
         internal const int MAX_MPGC = 32768;
         internal const int MODUPDATE = 100;
         internal const int MAXLOOKFORAUDIO = 10000;
+        internal IIfoFileReader FileReader;
 
         private static Ref<byte> pcmheader = new ByteArrayRef(new byte[]{
         0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x41, 0x56, 0x45, 0x66, 0x6D, 0x74, 0x20,
@@ -35,8 +36,9 @@ namespace PgcDemuxCS
 
         }
 
-        public static bool Run(string command)
+        public static bool Run(string command, IIfoFileReader reader)
         {
+            theApp.FileReader = reader;
             return theApp.InitInstance(command);
         }
 
@@ -63,7 +65,6 @@ namespace PgcDemuxCS
         public bool m_bCheckEndTime;
 
         public CString m_csInputIFO;
-        public CString m_csInputPath;
         public CString m_csOutputPath;
         public int m_nPGCs;
         public int m_iIFOlen;
@@ -429,11 +430,8 @@ namespace PgcDemuxCS
             m_csInputIFO = __argv[(__argc) - 2];
             m_csOutputPath = __argv[(__argc) - 1];
 
-            m_csInputPath = m_csInputIFO.Left(m_csInputIFO.ReverseFind('\\'));
-
             m_csInputIFO.MakeUpper();
             m_csOutputPath.MakeUpper();
-            m_csInputPath.MakeUpper();
 
             csAux = m_csInputIFO.Right(m_csInputIFO.GetLength() - m_csInputIFO.ReverseFind('\\') - 1);
             csAux1 = csAux.Left(4);
@@ -470,22 +468,21 @@ namespace PgcDemuxCS
             int iSize, iCat;
             int iIFOSize = 0;
 
+            inFile = CFILE.OpenRead(FileReader, m_csInputIFO);
+            if (inFile == null)
+            {
+                csAux = $"Unable to open {m_csInputIFO}";
+                Util.MyErrorBox(csAux);
+                return -1;
+            }
 
-            if (Util._stati64(m_csInputIFO, out statbuf))
-                iIFOSize = (int)statbuf.Length;
+            iIFOSize = (int)inFile.Size;
 
             if (iIFOSize > MAXLENGTH)
             {
                 csAux = $"IFO too big {m_csInputIFO}";
                 Util.MyErrorBox(csAux);
-                return -1;
-            }
-
-            inFile = CFILE.fopen(m_csInputIFO, "rb");
-            if (inFile == null)
-            {
-                csAux = $"Unable to open {m_csInputIFO}";
-                Util.MyErrorBox(csAux);
+                inFile.fclose();
                 return -1;
             }
 
@@ -793,8 +790,13 @@ namespace PgcDemuxCS
 
                 csAux2 = m_csInputIFO.Left(m_csInputIFO.GetLength() - 3);
                 csAux = csAux2 + "VOB";
-                if (Util._stati64(csAux, out statbuf))
-                    m_i64VOBSize[0] = statbuf.Length;
+
+                CFILE? file = CFILE.OpenRead(FileReader, csAux);
+                if (file != null)
+                {
+                    m_i64VOBSize[0] = file.Size;
+                    file.fclose();
+                }
             }
             else
             {
@@ -803,10 +805,13 @@ namespace PgcDemuxCS
                     csAux2 = m_csInputIFO.Left(m_csInputIFO.GetLength() - 5);
                     csAux = $"{k}.VOB";
                     csAux = csAux2 + csAux;
-                    if (Util._stati64(csAux, out statbuf))
+
+                    CFILE? file = CFILE.OpenRead(FileReader, csAux);
+                    if (file != null)
                     {
-                        m_i64VOBSize[k] = statbuf.Length;
+                        m_i64VOBSize[k] = file.Size;
                         m_nVobFiles = k;
+                        file.fclose();
                     }
                     else
                         m_i64VOBSize[k] = 0;
@@ -905,7 +910,7 @@ namespace PgcDemuxCS
                     csAux2 = m_csInputIFO.Left(m_csInputIFO.GetLength() - 5);
                     csAux = $"{nVobin}.VOB";
                     csAux = csAux2 + csAux;
-                    inFile = CFILE.fopen(csAux, "rb");
+                    inFile = CFILE.OpenRead(FileReader, csAux);
                     if (inFile == null)
                     {
                         Util.MyErrorBox("Error opening input VOB: " + csAux);
@@ -925,7 +930,7 @@ namespace PgcDemuxCS
                             csAux2 = m_csInputIFO.Left(m_csInputIFO.GetLength() - 5);
                             csAux = $"{nVobin}.VOB";
                             csAux = csAux2 + csAux;
-                            inFile = CFILE.fopen(csAux, "rb");
+                            inFile = CFILE.OpenRead(FileReader, csAux);
                             if (Util.readbuffer(m_buffer, inFile) != 2048)
                             {
                                 Util.MyErrorBox("Input error: Reached end of VOB too early");
@@ -1068,7 +1073,7 @@ namespace PgcDemuxCS
                     csAux2 = m_csInputIFO.Left(m_csInputIFO.GetLength() - 5);
                     csAux = csAux2 + "0.VOB";
                 }
-                inFile = CFILE.fopen(csAux, "rb");
+                inFile = CFILE.OpenRead(FileReader, csAux);
                 if (inFile == null)
                 {
                     Util.MyErrorBox("Error opening input VOB: " + csAux);
@@ -1200,7 +1205,7 @@ namespace PgcDemuxCS
                     csAux2 = m_csInputIFO.Left(m_csInputIFO.GetLength() - 5);
                     csAux = $"{nVobin}.VOB";
                     csAux = csAux2 + csAux;
-                    inFile = CFILE.fopen(csAux, "rb");
+                    inFile = CFILE.OpenRead(FileReader, csAux);
                     if (inFile == null)
                     {
                         Util.MyErrorBox("Error opening input VOB: " + csAux);
@@ -1220,7 +1225,7 @@ namespace PgcDemuxCS
                             csAux2 = m_csInputIFO.Left(m_csInputIFO.GetLength() - 5);
                             csAux = $"{nVobin}.VOB";
                             csAux = csAux2 + csAux;
-                            inFile = CFILE.fopen(csAux, "rb");
+                            inFile = CFILE.OpenRead(FileReader, csAux);
                             if (Util.readbuffer(m_buffer, inFile) != 2048)
                             {
                                 Util.MyErrorBox("Input error: Reached end of VOB too early");
@@ -1350,7 +1355,7 @@ namespace PgcDemuxCS
                         csAux2 = m_csInputIFO.Left(m_csInputIFO.GetLength() - 5);
                         csAux = csAux2 + "0.VOB";
                     }
-                    inFile = CFILE.fopen(csAux, "rb");
+                    inFile = CFILE.OpenRead(FileReader, csAux);
                     if (inFile == null)
                     {
                         Util.MyErrorBox("Error opening input VOB: " + csAux);
@@ -1492,7 +1497,7 @@ namespace PgcDemuxCS
             csAux2 = m_csInputIFO.Left(m_csInputIFO.GetLength() - 5);
             csAux = $"{nVobin}.VOB";
             csAux = csAux2 + csAux;
-            inFile = CFILE.fopen(csAux, "rb");
+            inFile = CFILE.OpenRead(FileReader, csAux);
             if (inFile == null)
             {
                 Util.MyErrorBox("Error opening input VOB: " + csAux);
@@ -1512,7 +1517,7 @@ namespace PgcDemuxCS
                     csAux2 = m_csInputIFO.Left(m_csInputIFO.GetLength() - 5);
                     csAux = $"{nVobin}.VOB";
                     csAux = csAux2 + csAux;
-                    inFile = CFILE.fopen(csAux, "rb");
+                    inFile = CFILE.OpenRead(FileReader, csAux);
                     if (Util.readbuffer(m_buffer, inFile) != 2048)
                     {
                         Util.MyErrorBox("Input error: Reached end of VOB too early");
@@ -1614,7 +1619,7 @@ namespace PgcDemuxCS
                 csAux2 = m_csInputIFO.Left(m_csInputIFO.GetLength() - 5);
                 csAux = csAux2 + "0.VOB";
             }
-            inFile = CFILE.fopen(csAux, "rb");
+            inFile = CFILE.OpenRead(FileReader, csAux);
             if (inFile == null)
             {
                 Util.MyErrorBox("Error opening input VOB: " + csAux);
@@ -1902,8 +1907,12 @@ namespace PgcDemuxCS
                         i64size = 0;
                         faud[i].fclose();
 
-                        if (Util._stati64(m_csAudname[i], out statbuf))
-                            i64size = statbuf.Length;
+                        CFILE? file = CFILE.OpenRead(FileReader, m_csAudname[i]);
+                        if (file != null)
+                        {
+                            i64size = file.Size;
+                            file.fclose();
+                        }
 
                         if (i64size >= 8) i64size -= 8;
 
@@ -2573,7 +2582,7 @@ namespace PgcDemuxCS
             csAux2 = m_csInputIFO.Left(m_csInputIFO.GetLength() - 5);
             csAux = $"{nVobin}.VOB";
             csAux = csAux2 + csAux;
-            inFile = CFILE.fopen(csAux, "rb");
+            inFile = CFILE.OpenRead(FileReader, csAux);
             if (inFile == null)
             {
                 Util.MyErrorBox("Error opening input VOB: " + csAux);
@@ -2591,7 +2600,7 @@ namespace PgcDemuxCS
                     csAux2 = m_csInputIFO.Left(m_csInputIFO.GetLength() - 5);
                     csAux = $"{nVobin}.VOB";
                     csAux = csAux2 + csAux;
-                    inFile = CFILE.fopen(csAux, "rb");
+                    inFile = CFILE.OpenRead(FileReader, csAux);
                     if (Util.readbuffer(m_buffer, inFile) != 2048)
                     {
                         Util.MyErrorBox("Input error: Reached end of VOB too early");
@@ -2708,7 +2717,7 @@ namespace PgcDemuxCS
                 csAux2 = m_csInputIFO.Left(m_csInputIFO.GetLength() - 5);
                 csAux = csAux2 + "0.VOB";
             }
-            inFile = CFILE.fopen(csAux, "rb");
+            inFile = CFILE.OpenRead(FileReader, csAux);
             if (inFile == null)
             {
                 Util.MyErrorBox("Error opening input VOB: " + csAux);

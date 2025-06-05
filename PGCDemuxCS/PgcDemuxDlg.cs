@@ -69,7 +69,7 @@ namespace PgcDemuxCS
                 PgcDemuxApp.theApp.m_bVMGM = false;
 
             PgcDemuxApp.theApp.m_csInputIFO = m_csEditInput;
-            PgcDemuxApp.theApp.m_csInputPath = m_csEditInput.Left(m_csEditInput.ReverseFind('\\'));
+            //PgcDemuxApp.theApp.m_csInputPath = m_csEditInput.Left(m_csEditInput.ReverseFind('\\'));
             //UpdateData (FALSE);
             if (PgcDemuxApp.theApp.ReadIFO() == 0)
             {
@@ -99,7 +99,7 @@ namespace PgcDemuxCS
             PgcDemuxApp.theApp.m_csOutputPath = m_csEditOutput;
 
             csOutput = PgcDemuxApp.theApp.m_csOutputPath;
-            csInput = PgcDemuxApp.theApp.m_csInputPath;
+            csInput = ""; //PgcDemuxApp.theApp.m_csInputPath;
             csOutput.MakeUpper();
             csInput.MakeUpper();
 

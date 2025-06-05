@@ -1,10 +1,15 @@
 namespace PgcDemuxCS
 {
-    public static class PgcDemux
+    public class PgcDemux
     {
-        public static void Run(string cmd)
+        public static void Run(string cmd, string dvdRootPath)
         {
-            PgcDemuxApp.Run(cmd);
+            PgcDemux.Run(cmd, new SimpleIfoReader(dvdRootPath));
+        }
+
+        public static void Run(string cmd, IIfoFileReader fileReader)
+        {
+            PgcDemuxApp.Run(cmd, fileReader);
         }
     }
 }

@@ -1,38 +1,69 @@
+using System.Reflection.PortableExecutable;
 using System.Text;
 
 namespace PgcDemuxCS
 {
     internal class CFILE
     {
-        FileStream Handle;
+        Stream Handle;
         public bool EOF { get; private set; } = false;
+        public long Size { get => Handle.Length; }
+
+        internal CFILE(Stream stream)
+        {
+            this.Handle = stream;
+        }
 
         private CFILE(string path, FileMode mode, FileAccess access)
         {
             this.Handle = File.Open(path, mode, access);
         }
 
-        public static CFILE fopen(string path, string mode)
+        public static CFILE? OpenRead(IIfoFileReader reader, string filename)
         {
-            switch (mode)
+            try
             {
-                case "r":
-                case "rb":
-                    return new CFILE(path, FileMode.Open, FileAccess.Read);
-                case "r+":
-                    return new CFILE(path, FileMode.Open, FileAccess.ReadWrite);
-                case "w":
-                case "wb":
-                    return new CFILE(path, FileMode.OpenOrCreate, FileAccess.Write);
-                case "w+":
-                    return new CFILE(path, FileMode.OpenOrCreate, FileAccess.ReadWrite);
-                case "a":
-                case "ab":
-                    return new CFILE(path, FileMode.Append, FileAccess.Write);
-                case "a+":
-                    return new CFILE(path, FileMode.Append, FileAccess.ReadWrite);
-                default:
-                    throw new ArgumentException();
+                return new CFILE(reader.OpenFile(filename));
+            }catch(Exception e)
+            {
+                //Console.ForegroundColor = ConsoleColor.Red;
+                //Console.WriteLine($"Failed to open CFILE '{filename}': {e.ToString()}");
+                //Console.ResetColor();
+                return null;
+            }
+        }
+
+        public static CFILE? fopen(string path, string mode)
+        {
+            try
+            {
+                switch (mode)
+                {
+                    case "r":
+                    case "rb":
+                        return new CFILE(path, FileMode.Open, FileAccess.Read);
+                    case "r+":
+                        return new CFILE(path, FileMode.Open, FileAccess.ReadWrite);
+                    case "w":
+                    case "wb":
+                        return new CFILE(path, FileMode.OpenOrCreate, FileAccess.Write);
+                    case "w+":
+                        return new CFILE(path, FileMode.OpenOrCreate, FileAccess.ReadWrite);
+                    case "a":
+                    case "ab":
+                        return new CFILE(path, FileMode.Append, FileAccess.Write);
+                    case "a+":
+                        return new CFILE(path, FileMode.Append, FileAccess.ReadWrite);
+                    default:
+                        throw new ArgumentException();
+                }
+            }
+            catch (Exception e)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"Failed to open CFILE '{path}': {e.ToString()}");
+                Console.ResetColor();
+                return null;
             }
         }
 
