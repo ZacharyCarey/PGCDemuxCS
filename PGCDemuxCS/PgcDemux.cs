@@ -78,10 +78,10 @@ public class PgcDemuxApp
     public bool bNewCell;
     public int m_nLastVid, m_nLastCid;
 
-    public CArray<ADT_CELL_LIST> m_AADT_Cell_list;
-    public CArray<ADT_CELL_LIST> m_MADT_Cell_list;
-    public CArray<ADT_VID_LIST> m_AADT_Vid_list;
-    public CArray<ADT_VID_LIST> m_MADT_Vid_list;
+    public CArray<ADT_CELL_LIST> m_AADT_Cell_list = new();
+    public CArray<ADT_CELL_LIST> m_MADT_Cell_list = new();
+    public CArray<ADT_VID_LIST> m_AADT_Vid_list = new();
+    public CArray<ADT_VID_LIST> m_MADT_Vid_list = new();
 
     public int m_iVTS_PTT_SRPT, m_iVTS_PGCI, m_iVTS_C_ADT;
     public int m_iVTS_VOBU_ADMAP, m_iVTS_TMAPTI;
@@ -451,8 +451,8 @@ public class PgcDemuxApp
         CString csAux,csAux2;
         int i,j,k,kk,nCell,nVIDs;
         kk = 0;
-        ADT_CELL_LIST myADT_Cell = new();
-        ADT_VID_LIST myADT_Vid = new();
+        ADT_CELL_LIST myADT_Cell;
+        ADT_VID_LIST myADT_Vid;
         int nTotADT, nADT, VidADT,CidADT;
         int iArraysize;
         bool bAlready, bEndAngle;
@@ -489,7 +489,7 @@ public class PgcDemuxApp
 
 
         for (i=0;!inFile.feof() && i< MAXLENGTH ;i++)
-            m_pIFO[i]=inFile.fgetc();
+            m_pIFO[i]=(byte)inFile.fgetc();
         m_iIFOlen=i-1;
         inFile.fclose();
 
@@ -649,6 +649,7 @@ public class PgcDemuxApp
             }
             if (!bAlready)
             {
+                myADT_Cell = new();
                 myADT_Cell.CID=CidADT;
                 myADT_Cell.VID=VidADT;
                 myADT_Cell.iSize=0;
@@ -692,6 +693,7 @@ public class PgcDemuxApp
             }
             if (!bAlready)
             {
+                myADT_Cell = new();
                 myADT_Cell.CID=CidADT;
                 myADT_Cell.VID=VidADT;
                 myADT_Cell.iSize=0;
@@ -730,6 +732,7 @@ public class PgcDemuxApp
             }
             if (!bAlready)
             {
+                myADT_Vid = new();
                 myADT_Vid.VID=VidADT;
                 myADT_Vid.iSize=0;
                 myADT_Vid.nCells=0;
@@ -759,6 +762,7 @@ public class PgcDemuxApp
             }
             if (!bAlready)
             {
+                myADT_Vid = new();
                 myADT_Vid.VID=VidADT;
                 myADT_Vid.iSize=0;
                 myADT_Vid.nCells=0;

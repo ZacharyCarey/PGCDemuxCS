@@ -4,12 +4,16 @@ internal static class Util
     {
         // TODO error message
         //AfxMessageBox(text, MB_OK | MB_ICONEXCLAMATION, 0);
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.WriteLine(text);
+        Console.ResetColor();
     }
 
     public static void MyInfoBox(string text)
     {
         // TODO info message
         //AfxMessageBox(text, MB_OK | MB_ICONINFORMATION, 0);
+        Console.WriteLine(text);
     }
 
     public static int readpts(Ref<byte> buf)
@@ -585,7 +589,7 @@ internal static class Util
         try
         {
             result = new FileInfo(path);
-            return true;
+            return File.Exists(path);
         }
         catch (Exception)
         {

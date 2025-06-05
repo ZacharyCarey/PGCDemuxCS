@@ -4,6 +4,7 @@ using System.Text;
 public class CFILE
 {
     FileStream Handle;
+    public bool EOF { get; private set; } = false;
 
     private CFILE(string path, FileMode mode, FileAccess access)
     {
@@ -42,7 +43,10 @@ public class CFILE
     /// <returns></returns>
     public int fread(Ref<byte> buffer, int size, int count)
     {
-        return buffer.ReadFromStream(this.Handle, size * count);
+        int byteCount = size * count;
+        int result = buffer.ReadFromStream(this.Handle, byteCount);
+        if (result < byteCount) this.EOF = true;
+        return result;
     }
 
     /// <summary>
@@ -88,11 +92,13 @@ public class CFILE
 
     public bool feof()
     {
-        return this.Handle.Position >= this.Handle.Length;
+        return this.EOF;
     }
 
-    public byte fgetc()
+    public int fgetc()
     {
-        return (byte)this.Handle.ReadByte();
+        int c = this.Handle.ReadByte();
+        if (c < 0) this.EOF = true;
+        return c;
     }
 }
