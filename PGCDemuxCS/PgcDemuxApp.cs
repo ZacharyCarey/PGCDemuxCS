@@ -342,8 +342,8 @@ namespace PgcDemuxCS
 
             if (Options.m_bCheckCellt && m_bInProcess == true)
             {
-                csAux = Options.m_csOutputPath + '\\' + "Celltimes.txt";
-                fout = CFILE.fopen(csAux, "w");
+                csAux = Path.Combine(Options.m_csOutputPath, "Celltimes.txt");
+                fout = CFILE.OpenWrite(csAux);
                 for (nCell = 0, nCurrAngle = 0; nCell < FileInfo.m_nCells[nPGC] && m_bInProcess == true; nCell++)
                 {
                     dwCellDuration = (uint)Util.GetNbytes(4, FileInfo.m_pIFO.AtIndex(FileInfo.m_C_PBKT[nPGC] + 24 * nCell + 4));
@@ -495,8 +495,8 @@ namespace PgcDemuxCS
 
             if (Options.m_bCheckCellt && m_bInProcess == true)
             {
-                csAux = Options.m_csOutputPath + '\\' + "Celltimes.txt";
-                fout = CFILE.fopen(csAux, "w");
+                csAux = Path.Combine(Options.m_csOutputPath, "Celltimes.txt");
+                fout = CFILE.OpenWrite(csAux);
                 for (nCell = 0; nCell < FileInfo.m_nMCells[nPGC] && m_bInProcess == true; nCell++)
                 {
                     dwCellDuration = (uint)Util.GetNbytes(4, FileInfo.m_pIFO.AtIndex(FileInfo.m_M_C_PBKT[nPGC] + 24 * nCell + 4));
@@ -635,8 +635,8 @@ namespace PgcDemuxCS
 
             if (Options.m_bCheckCellt && m_bInProcess == true)
             {
-                csAux = Options.m_csOutputPath + '\\' + "Celltimes.txt";
-                fout = CFILE.fopen(csAux, "w");
+                csAux = Path.Combine(Options.m_csOutputPath, "Celltimes.txt");
+                fout = CFILE.OpenWrite(csAux);
 
                 nDemuxedVID = FileInfo.m_AADT_Vid_list[nVid].VID;
 
@@ -778,8 +778,8 @@ namespace PgcDemuxCS
 
             if (Options.m_bCheckCellt && m_bInProcess == true)
             {
-                csAux = Options.m_csOutputPath + '\\' + "Celltimes.txt";
-                fout = CFILE.fopen(csAux, "w");
+                csAux = Path.Combine(Options.m_csOutputPath, "Celltimes.txt");
+                fout = CFILE.OpenWrite(csAux);
 
                 nDemuxedVID = FileInfo.m_MADT_Vid_list[nVid].VID;
 
@@ -926,8 +926,8 @@ namespace PgcDemuxCS
 
             if (Options.m_bCheckCellt && m_bInProcess == true)
             {
-                csAux = Options.m_csOutputPath + '\\' + "Celltimes.txt";
-                fout = CFILE.fopen(csAux, "w");
+                csAux = Path.Combine(Options.m_csOutputPath, "Celltimes.txt");
+                fout = CFILE.OpenWrite(csAux);
                 nFrames = Util.DurationInFrames(FileInfo.m_AADT_Cell_list[nCell].dwDuration);
                 if (Options.m_bCheckEndTime)
                     fout.fprintf($"{nFrames}\n");
@@ -1039,8 +1039,8 @@ namespace PgcDemuxCS
 
             if (Options.m_bCheckCellt && m_bInProcess == true)
             {
-                csAux = Options.m_csOutputPath + '\\' + "Celltimes.txt";
-                fout = CFILE.fopen(csAux, "w");
+                csAux = Path.Combine(Options.m_csOutputPath, "Celltimes.txt");
+                fout = CFILE.OpenWrite(csAux);
                 nFrames = Util.DurationInFrames(FileInfo.m_MADT_Cell_list[nCell].dwDuration);
                 if (Options.m_bCheckEndTime)
                     fout.fprintf($"{nFrames}\n");
@@ -1215,8 +1215,8 @@ namespace PgcDemuxCS
                             csAux = $"VTS_01_1_{m_nVidout:000}.VOB";
                         else
                             csAux = $"VTS_01_0_{m_nVidout:000}.VOB";
-                        csAux = Options.m_csOutputPath + '\\' + csAux;
-                        fvob = CFILE.fopen(csAux, "wb");
+                        csAux = Path.Combine(Options.m_csOutputPath, csAux);
+                        fvob = CFILE.OpenWrite(csAux);
                     }
                 }
                 else
@@ -1232,8 +1232,8 @@ namespace PgcDemuxCS
                         else
                             csAux = "VTS_01_0.VOB";
 
-                        csAux = Options.m_csOutputPath + '\\' + csAux;
-                        fvob = CFILE.fopen(csAux, "wb");
+                        csAux = Path.Combine(Options.m_csOutputPath, csAux);
+                        fvob = CFILE.OpenWrite(csAux);
                     }
                 }
 
@@ -1282,7 +1282,7 @@ namespace PgcDemuxCS
 
                         if (i64size >= 8) i64size -= 8;
 
-                        faud[i] = CFILE.fopen(m_csAudname[i], "r+b");
+                        faud[i] = CFILE.OpenReadWrite(m_csAudname[i]);
 
                         faud[i].fseek(4, SeekOrigin.Begin);
                         faud[i].fputc((byte)(i64size % 256));
@@ -1344,8 +1344,8 @@ namespace PgcDemuxCS
             if (fsub[i] == null)
             {
                 csAux = $"Subpictures_{(i + 0x20):X2}.sup";
-                csAux = Options.m_csOutputPath + '\\' + csAux;
-                if ((fsub[i] = CFILE.fopen(csAux, "wb")) == null)
+                csAux = Path.Combine(Options.m_csOutputPath, csAux);
+                if ((fsub[i] = CFILE.OpenWrite(csAux)) == null)
                 {
                     Util.MyErrorBox("Error opening output subs file:" + csAux);
                     m_bInProcess = false;
@@ -1430,10 +1430,10 @@ namespace PgcDemuxCS
                     m_audfmt[i] = AudioFormat.Unknown;
                 }
 
-                csAux = Options.m_csOutputPath + '\\' + csAux;
+                csAux = Path.Combine(Options.m_csOutputPath, csAux);
                 m_csAudname[i] = csAux;
 
-                if ((faud[i] = CFILE.fopen(csAux, "wb")) == null)
+                if ((faud[i] = CFILE.OpenWrite(csAux)) == null)
                 {
                     Util.MyErrorBox("Error opening output audio file:" + csAux);
                     m_bInProcess = false;
@@ -1620,8 +1620,8 @@ namespace PgcDemuxCS
 
             if (Options.m_bCheckVid)
             {
-                csAux = Options.m_csOutputPath + '\\' + "VideoFile.m2v";
-                fvid = CFILE.fopen(csAux, "wb");
+                csAux = Path.Combine(Options.m_csOutputPath, "VideoFile.m2v");
+                fvid = CFILE.OpenWrite(csAux);
                 if (fvid == null) return true;
             }
 

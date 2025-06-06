@@ -14,11 +14,6 @@ namespace PgcDemuxCS
             this.Handle = stream;
         }
 
-        private CFILE(string path, FileMode mode, FileAccess access)
-        {
-            this.Handle = File.Open(path, mode, access);
-        }
-
         public static CFILE? OpenRead(IIfoFileReader reader, string filename)
         {
             try
@@ -26,43 +21,30 @@ namespace PgcDemuxCS
                 return new CFILE(reader.OpenFile(filename));
             }catch(Exception e)
             {
-                //Console.ForegroundColor = ConsoleColor.Red;
-                //Console.WriteLine($"Failed to open CFILE '{filename}': {e.ToString()}");
-                //Console.ResetColor();
                 return null;
             }
         }
 
-        public static CFILE? fopen(string path, string mode)
+        public static CFILE? OpenWrite(string path, bool append = false)
         {
             try
             {
-                switch (mode)
-                {
-                    case "r":
-                    case "rb":
-                        return new CFILE(path, FileMode.Open, FileAccess.Read);
-                    case "r+":
-                        return new CFILE(path, FileMode.Open, FileAccess.ReadWrite);
-                    case "w":
-                    case "wb":
-                        return new CFILE(path, FileMode.OpenOrCreate, FileAccess.Write);
-                    case "w+":
-                        return new CFILE(path, FileMode.OpenOrCreate, FileAccess.ReadWrite);
-                    case "a":
-                    case "ab":
-                        return new CFILE(path, FileMode.Append, FileAccess.Write);
-                    case "a+":
-                        return new CFILE(path, FileMode.Append, FileAccess.ReadWrite);
-                    default:
-                        throw new ArgumentException();
-                }
+                return new CFILE(File.Open(path, append ? FileMode.Append : FileMode.Create, FileAccess.Write));
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"Failed to open CFILE '{path}': {e.ToString()}");
-                Console.ResetColor();
+                return null;
+            }
+        }
+
+        public static CFILE? OpenReadWrite(string path, bool append = false)
+        {
+            try
+            {
+                return new CFILE(File.Open(path, append ? FileMode.Append : FileMode.Create, FileAccess.ReadWrite));
+            }
+            catch (Exception)
+            {
                 return null;
             }
         }
