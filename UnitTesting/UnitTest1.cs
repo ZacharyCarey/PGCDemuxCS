@@ -1,4 +1,5 @@
 using PgcDemuxCS;
+using PGCDemuxCS;
 using System.Diagnostics;
 
 namespace UnitTesting
@@ -78,32 +79,33 @@ namespace UnitTesting
             }
         }
 
-        public string ActualArgs
+        public PgcDemuxOptions ActualArgs
         {
             get
             {
-                List<string> args = new();
-                args.Add("pgcdemux");
-                args.Add(GetModeSwitch());
-                args.Add(ID.ToString());
-                if (CID != null) args.Add(CID.Value.ToString());
-                args.Add(GetDomain());
-                if (Angle != null) args.Add($"-ang {Angle}");
-                args.Add(ExtractVideo ? "-m2v" : "-nom2v");
-                args.Add(ExtractAudio ? "-aud" : "-noaud");
-                args.Add(ExtractSubs ? "-sub" : "-nosub");
-                args.Add(VOB ? "-vob" : "-novob");
-                if (CustomVOB)
+                PgcDemuxOptions options = new(IfoFileName, "${DEST}");
+                options.Mode = this.Mode;
+                if (this.Mode == ModeType.PGC)
                 {
-                    args.Add("-customvob");
-                    args.Add($"{(SplitVOB ? "b" : "")}nvasl");
+                    options.SelectedPGC = this.ID;
                 }
-                args.Add(GenerateCellt ? "-cellt" : "-nocellt");
-                args.Add(GenerateLog ? "-log" : "-nolog");
-                args.Add(IfoFileName);
-                args.Add("${DEST}");
+                else if (this.Mode == ModeType.VID)
+                {
+                    options.SelectedVID = this.ID;
+                }
+                else
+                {
+                    options.SelectedVID = this.ID;
+                    options.SelectedCID = this.CID.Value;
+                }
+                options.Domain = this.Domain;
+                if (this.Angle != null) options.SelectedAngle = this.Angle.Value;
+                options.ExtractVideoStream = this.ExtractVideo;
+                options.ExtractAudioStream = this.ExtractAudio;
+                options.ExtractSubtitleStream = this.ExtractSubs;
+                options.ExportVOB = this.CustomVOB;
 
-                return string.Join(" ", args);
+                return options;
             }
         }
     }
@@ -162,13 +164,18 @@ namespace UnitTesting
             return input;
         }
 
-        private void CompareOutput(string expectedCommand, string actualCommand, params string[] vars)
+        private void FillVariables(PgcDemuxOptions input, string dest)
+        {
+            input.Destination = dest;
+        }
+
+        private void CompareOutput(string expectedCommand, PgcDemuxOptions actualCommand, params string[] vars)
         {
             FileManager Files = new FileManager();
 
             // Replace variables in command
             expectedCommand = FillVariables(expectedCommand, Files.ExpectedPath, vars);
-            actualCommand = FillVariables(actualCommand, Files.ActualPath, vars);
+            FillVariables(actualCommand, Files.ActualPath);
 
             // Run PgcDemux.exe
             var proc = Process.Start(PgcDemuxPath, expectedCommand);

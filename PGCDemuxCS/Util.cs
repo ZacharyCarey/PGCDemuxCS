@@ -30,9 +30,9 @@ namespace PgcDemuxCS
             return pts;
         }
 
-        public static CString Size_MBytes(long i64size)
+        public static string Size_MBytes(long i64size)
         {
-            CString csAux;
+            string csAux;
 
             if (i64size < 9999)
                 csAux = $"{i64size} By";
@@ -46,9 +46,9 @@ namespace PgcDemuxCS
             return csAux;
         }
 
-        public static CString FormatDuration(ulong duration)
+        public static string FormatDuration(ulong duration)
         {
-            CString csAux;
+            string csAux;
 
             if (duration < 0)
                 csAux = "Unknown";
@@ -221,9 +221,6 @@ namespace PgcDemuxCS
 
             return ret;
         }
-
-        // Sorry, a dirty trick to pass the folder 
-        private static CString csGlobalStartFolder;
 
         public static int readbuffer(Ref<byte> caracter, CFILE fin)
         {

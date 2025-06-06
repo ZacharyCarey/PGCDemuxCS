@@ -1,15 +1,17 @@
+using PGCDemuxCS;
+
 namespace PgcDemuxCS
 {
     public class PgcDemux
     {
-        public static void Run(string cmd, string dvdRootPath)
+        public static void Run(PgcDemuxOptions options, string dvdRootPath)
         {
-            PgcDemux.Run(cmd, new SimpleIfoReader(dvdRootPath));
+            PgcDemux.Run(options, new SimpleIfoReader(dvdRootPath));
         }
 
-        public static void Run(string cmd, IIfoFileReader fileReader)
+        public static void Run(PgcDemuxOptions options, IIfoFileReader fileReader)
         {
-            PgcDemuxApp.Run(cmd, fileReader);
+            PgcDemuxApp.Run(options, fileReader);
         }
     }
 }
