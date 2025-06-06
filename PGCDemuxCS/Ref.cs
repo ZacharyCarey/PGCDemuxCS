@@ -86,6 +86,11 @@ namespace PgcDemuxCS
         {
         }
 
+        public override Ref<byte> AtIndex(long index)
+        {
+            return new ByteArrayRef(Data, this.Index + index);
+        }
+
         public override int ReadFromStream(Stream stream, int count)
         {
             return stream.Read(this.Data, (int)this.Index, count);

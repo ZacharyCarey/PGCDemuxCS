@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PGCDemuxCS", "PGCDemuxCS\PG
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestProgram", "TestProgram\TestProgram.csproj", "{FC78BEE8-93FE-44BF-AD6A-E43BA8C285F1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTesting", "UnitTesting\UnitTesting.csproj", "{2B584398-6588-4912-AD67-3762B4AD4606}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{FC78BEE8-93FE-44BF-AD6A-E43BA8C285F1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FC78BEE8-93FE-44BF-AD6A-E43BA8C285F1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FC78BEE8-93FE-44BF-AD6A-E43BA8C285F1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2B584398-6588-4912-AD67-3762B4AD4606}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2B584398-6588-4912-AD67-3762B4AD4606}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2B584398-6588-4912-AD67-3762B4AD4606}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2B584398-6588-4912-AD67-3762B4AD4606}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
