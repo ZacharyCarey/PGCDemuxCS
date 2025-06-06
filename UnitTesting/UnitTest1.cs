@@ -190,9 +190,24 @@ namespace UnitTesting
                 var actualFilePath = Path.Combine(Files.ActualPath, fileName);
                 Assert.IsTrue(File.Exists(actualFilePath), $"Could not find expected file '{fileName}'.");
 
-                byte[] expectedBytes = File.ReadAllBytes(expectedFilePath);
-                byte[] actualBytes = File.ReadAllBytes(actualFilePath);
-                Assert.IsTrue(expectedBytes.SequenceEqual(actualBytes), $"Actual file {fileName} did not match the expected file.");
+                string errMsg = $"Actual file {fileName} did not match the expected file.";
+                byte[] expectedBuffer = new byte[4096];
+                byte[] actualBuffer = new byte[4096];
+                using (Stream expectedStream = File.OpenRead(expectedFilePath))
+                {
+                    using (Stream actualStream = File.OpenRead(actualFilePath))
+                    {
+                        bool eof = false;
+                        while (!eof)
+                        {
+                            int expectedCount = expectedStream.Read(expectedBuffer, 0, expectedBuffer.Length);
+                            int actualCount = actualStream.Read(actualBuffer, 0, actualBuffer.Length);
+                            Assert.IsTrue(expectedCount == actualCount, errMsg);
+                            if (expectedCount == 0 || actualCount == 0) eof = true;
+                            Assert.IsTrue(expectedBuffer.SequenceEqual(actualBuffer), errMsg);
+                        }
+                    }
+                }
             }
         }
         private void CompareOutput(TestParams test)
