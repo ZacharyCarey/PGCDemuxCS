@@ -104,9 +104,9 @@ namespace PgcDemuxCS
                 {
                     // Check if PGC exists in done in PgcDemux
                     if (Options.m_iDomain == DomainType.Titles)
-                        m_iRet = PgcDemux(Options.m_nSelPGC, Options.m_nSelAng, null);
+                        m_iRet = PgcDemux(Options.m_nSelPGC, null, ref FileInfo.m_nPGCs, ref FileInfo.m_AADT_Cell_list, FileInfo.m_nCells, FileInfo.m_C_POST, FileInfo.m_C_PBKT);
                     else
-                        m_iRet = PgcMDemux(Options.m_nSelPGC, null);
+                        m_iRet = PgcDemux(Options.m_nSelPGC, null, ref FileInfo.m_nMPGCs, ref FileInfo.m_MADT_Cell_list, FileInfo.m_nMCells, FileInfo.m_M_C_POST, FileInfo.m_M_C_PBKT);
                 }
                 if (Options.m_iMode == ModeType.VID)
                 {
@@ -185,25 +185,25 @@ namespace PgcDemuxCS
             return m_iRet;
         }
 
-        public int PgcDemux(int nPGC, int nAng, object pDlg)
+        public virtual int PgcDemux(int nPGC, object pDlg, ref int m_nPGCs, ref CArray<ADT_CELL_LIST> m_AADT_Cell_list, int[] m_nCells, int[] m_C_POST, int[] m_C_PBKT)
         {
             int nTotalSectors;
             int nSector, nCell;
             int k, iArraysize;
             int CID, VID;
-            long i64IniSec, i64EndSec;
-            long i64sectors;
+            long i64IniSec, i64EndSec, i64sectors;
             int nVobin = 0;
             string csAux, csAux2;
-            CFILE inFile, fout;
+            CFILE inFile;
+            CFILE fout;
             long i64;
             bool bMyCell;
             int iRet;
             uint dwCellDuration;
             int nFrames;
-            int nCurrAngle, iCat;
+            int nCurrAngle, iCat = 0;
 
-            if (nPGC >= FileInfo.m_nPGCs)
+            if (nPGC >= m_nPGCs)
             {
                 Util.MyErrorBox("Error: PGC does not exist");
                 m_bInProcess = false;
@@ -216,27 +216,34 @@ namespace PgcDemuxCS
 
             // Calculate  the total number of sectors
             nTotalSectors = 0;
-            iArraysize = FileInfo.m_AADT_Cell_list.GetSize();
-            for (nCell = nCurrAngle = 0; nCell < FileInfo.m_nCells[nPGC]; nCell++)
+            iArraysize = m_AADT_Cell_list.GetSize();
+            for (nCell = nCurrAngle = 0; nCell < m_nCells[nPGC]; nCell++)
             {
-                VID = Util.GetNbytes(2, FileInfo.m_pIFO.AtIndex(FileInfo.m_C_POST[nPGC] + 4 * nCell));
-                CID = FileInfo.m_pIFO[FileInfo.m_C_POST[nPGC] + 3 + 4 * nCell];
+                VID = Util.GetNbytes(2, FileInfo.m_pIFO.AtIndex(m_C_POST[nPGC] + 4 * nCell));
+                CID = FileInfo.m_pIFO[m_C_POST[nPGC] + 3 + 4 * nCell];
+                bool valid = true;
 
-                iCat = FileInfo.m_pIFO[FileInfo.m_C_PBKT[nPGC] + 24 * nCell];
-                iCat = iCat & 0xF0;
-                //		0101=First; 1001=Middle ;	1101=Last
-                if (iCat == 0x50)
-                    nCurrAngle = 1;
-                else if ((iCat == 0x90 || iCat == 0xD0) && nCurrAngle != 0)
-                    nCurrAngle++;
-                if (iCat == 0 || (nAng + 1) == nCurrAngle)
+                if (Options.m_iDomain == DomainType.Titles)
+                {
+                    // Check angle info
+                    iCat = FileInfo.m_pIFO[m_C_PBKT[nPGC] + 24 * nCell];
+                    iCat = iCat & 0xF0;
+                    //		0101=First; 1001=Middle ;	1101=Last
+                    if (iCat == 0x50)
+                        nCurrAngle = 1;
+                    else if ((iCat == 0x90 || iCat == 0xD0) && nCurrAngle != 0)
+                        nCurrAngle++;
+                    valid = (iCat == 0 || (Options.m_nSelAng + 1) == nCurrAngle);
+                }
+
+                if (valid)
                 {
                     for (k = 0; k < iArraysize; k++)
                     {
-                        if (CID == FileInfo.m_AADT_Cell_list[k].CID &&
-                            VID == FileInfo.m_AADT_Cell_list[k].VID)
+                        if (CID == m_AADT_Cell_list[k].CID &&
+                            VID == m_AADT_Cell_list[k].VID)
                         {
-                            nTotalSectors += FileInfo.m_AADT_Cell_list[k].iSize;
+                            nTotalSectors += m_AADT_Cell_list[k].iSize;
                         }
                     }
                 }
@@ -245,37 +252,61 @@ namespace PgcDemuxCS
 
             nSector = 0;
             iRet = 0;
-            for (nCell = nCurrAngle = 0; nCell < FileInfo.m_nCells[nPGC] && m_bInProcess == true; nCell++)
+
+            for (nCell = nCurrAngle = 0; nCell < m_nCells[nPGC] && m_bInProcess == true; nCell++)
             {
-                iCat = FileInfo.m_pIFO[FileInfo.m_C_PBKT[nPGC] + 24 * nCell];
-                iCat = iCat & 0xF0;
-                //		0101=First; 1001=Middle ;	1101=Last
-                if (iCat == 0x50)
-                    nCurrAngle = 1;
-                else if ((iCat == 0x90 || iCat == 0xD0) && nCurrAngle != 0)
-                    nCurrAngle++;
-                if (iCat == 0 || (nAng + 1) == nCurrAngle)
+                bool valid = true;
+                if (Options.m_iDomain == DomainType.Titles)
                 {
+                    iCat = FileInfo.m_pIFO[m_C_PBKT[nPGC] + 24 * nCell];
+                    iCat = iCat & 0xF0;
+                    //		0101=First; 1001=Middle ;	1101=Last
+                    if (iCat == 0x50)
+                        nCurrAngle = 1;
+                    else if ((iCat == 0x90 || iCat == 0xD0) && nCurrAngle != 0)
+                        nCurrAngle++;
+                    valid = (iCat == 0 || (Options.m_nSelAng + 1) == nCurrAngle);
+                }
+                if (valid)
+                {
+                    VID = Util.GetNbytes(2, FileInfo.m_pIFO.AtIndex(m_C_POST[nPGC] + 4 * nCell));
+                    CID = FileInfo.m_pIFO[m_C_POST[nPGC] + 3 + 4 * nCell];
 
-                    VID = Util.GetNbytes(2, FileInfo.m_pIFO.AtIndex(FileInfo.m_C_POST[nPGC] + 4 * nCell));
-                    CID = FileInfo.m_pIFO[FileInfo.m_C_POST[nPGC] + 3 + 4 * nCell];
-
-                    i64IniSec = Util.GetNbytes(4, FileInfo.m_pIFO.AtIndex(FileInfo.m_C_PBKT[nPGC] + nCell * 24 + 8));
-                    i64EndSec = Util.GetNbytes(4, FileInfo.m_pIFO.AtIndex(FileInfo.m_C_PBKT[nPGC] + nCell * 24 + 0x14));
-                    for (k = 1, i64sectors = 0; k < 10; k++)
+                    i64IniSec = Util.GetNbytes(4, FileInfo.m_pIFO.AtIndex(m_C_PBKT[nPGC] + nCell * 24 + 8));
+                    i64EndSec = Util.GetNbytes(4, FileInfo.m_pIFO.AtIndex(m_C_PBKT[nPGC] + nCell * 24 + 0x14));
+                    if (Options.m_iDomain == DomainType.Titles)
                     {
-                        i64sectors += (FileInfo.m_i64VOBSize[k] / 2048);
-                        if (i64IniSec < i64sectors)
+                        for (k = 1, i64sectors = 0; k < 10; k++)
                         {
-                            i64sectors -= (FileInfo.m_i64VOBSize[k] / 2048);
-                            nVobin = k;
-                            k = 20;
+                            i64sectors += (FileInfo.m_i64VOBSize[k] / 2048);
+                            if (i64IniSec < i64sectors)
+                            {
+                                i64sectors -= (FileInfo.m_i64VOBSize[k] / 2048);
+                                nVobin = k;
+                                k = 20;
+                            }
                         }
+
+                        // TODO create a function for this
+                        csAux2 = Options.m_csInputIFO[..^5];
+                        csAux = $"{nVobin}.VOB";
+                        csAux = csAux2 + csAux;
                     }
-                    // TODO create a function for this
-                    csAux2 = Options.m_csInputIFO[..^5];
-                    csAux = $"{nVobin}.VOB";
-                    csAux = csAux2 + csAux;
+                    else
+                    {
+                        if (FileInfo.m_bVMGM)
+                        {
+                            csAux2 = Options.m_csInputIFO[..^3];
+                            csAux = csAux2 + "VOB";
+                        }
+                        else
+                        {
+                            csAux2 = Options.m_csInputIFO[..^5];
+                            csAux = csAux2 + "0.VOB";
+                        }
+                        i64sectors = 0;
+                    }
+
                     inFile = CFILE.OpenRead(FileReader, csAux);
                     if (inFile == null)
                     {
@@ -291,13 +322,20 @@ namespace PgcDemuxCS
                         if ((i64 % MODUPDATE) == 0) UpdateProgress(pDlg, (int)((100 * nSector) / nTotalSectors));
                         if (Util.readbuffer(m_buffer, inFile) != 2048)
                         {
+                            bool failed = true;
                             if (inFile != null) inFile.fclose();
-                            nVobin++;
-                            csAux2 = Options.m_csInputIFO[..^5];
-                            csAux = $"{nVobin}.VOB";
-                            csAux = csAux2 + csAux;
-                            inFile = CFILE.OpenRead(FileReader, csAux);
-                            if (Util.readbuffer(m_buffer, inFile) != 2048)
+
+                            if (Options.m_iDomain == DomainType.Titles)
+                            {
+                                nVobin++;
+                                csAux2 = Options.m_csInputIFO[..^5];
+                                csAux = $"{nVobin}.VOB";
+                                csAux = csAux2 + csAux;
+                                inFile = CFILE.OpenRead(FileReader, csAux);
+                                failed = (Util.readbuffer(m_buffer, inFile) != 2048);
+                            }
+
+                            if (failed)
                             {
                                 Util.MyErrorBox("Input error: Reached end of VOB too early");
                                 m_bInProcess = false;
@@ -328,37 +366,43 @@ namespace PgcDemuxCS
                                 nSector++;
                                 iRet = ProcessPack(true);
                             }
-
                         }
                     } // For readpacks
                     if (inFile != null) inFile.fclose();
                     inFile = null;
-                }  // if (iCat==0 || (nAng+1) == nCurrAngle)
+                }
                 if (iCat == 0xD0) nCurrAngle = 0;
             }   // For Cells 
 
             CloseAndNull();
+
             nFrames = 0;
+            iCat = 0;
 
             if (Options.m_bCheckCellt && m_bInProcess == true)
             {
                 csAux = Path.Combine(Options.m_csOutputPath, "Celltimes.txt");
                 fout = CFILE.OpenWrite(csAux);
-                for (nCell = 0, nCurrAngle = 0; nCell < FileInfo.m_nCells[nPGC] && m_bInProcess == true; nCell++)
+                for (nCell = 0, nCurrAngle = 0; nCell < m_nCells[nPGC] && m_bInProcess == true; nCell++)
                 {
-                    dwCellDuration = (uint)Util.GetNbytes(4, FileInfo.m_pIFO.AtIndex(FileInfo.m_C_PBKT[nPGC] + 24 * nCell + 4));
+                    dwCellDuration = (uint)Util.GetNbytes(4, FileInfo.m_pIFO.AtIndex(m_C_PBKT[nPGC] + 24 * nCell + 4));
+                    bool valid = true;
+                    if (Options.m_iDomain == DomainType.Titles)
+                    {
+                        iCat = FileInfo.m_pIFO[m_C_PBKT[nPGC] + 24 * nCell];
+                        iCat = iCat & 0xF0;
+                        //			0101=First; 1001=Middle ;	1101=Last
+                        if (iCat == 0x50)
+                            nCurrAngle = 1;
+                        else if ((iCat == 0x90 || iCat == 0xD0) && nCurrAngle != 0)
+                            nCurrAngle++;
+                        valid = (iCat == 0 || (Options.m_nSelAng + 1) == nCurrAngle);
+                    }
 
-                    iCat = FileInfo.m_pIFO[FileInfo.m_C_PBKT[nPGC] + 24 * nCell];
-                    iCat = iCat & 0xF0;
-                    //			0101=First; 1001=Middle ;	1101=Last
-                    if (iCat == 0x50)
-                        nCurrAngle = 1;
-                    else if ((iCat == 0x90 || iCat == 0xD0) && nCurrAngle != 0)
-                        nCurrAngle++;
-                    if (iCat == 0 || (nAng + 1) == nCurrAngle)
+                    if (valid)
                     {
                         nFrames += Util.DurationInFrames(dwCellDuration);
-                        if (nCell != (FileInfo.m_nCells[nPGC] - 1) || Options.m_bCheckEndTime)
+                        if (nCell != (m_nCells[nPGC] - 1) || Options.m_bCheckEndTime)
                             fout.fprintf($"{nFrames}\n");
                     }
 
@@ -369,147 +413,7 @@ namespace PgcDemuxCS
 
             m_nTotalFrames = nFrames;
 
-            if (Options.m_bCheckLog && m_bInProcess == true) OutputLog(nPGC, nAng, DomainType.Titles);
-
-            return iRet;
-        }
-        public virtual int PgcMDemux(int nPGC, object pDlg)
-        {
-            int nTotalSectors;
-            int nSector, nCell;
-            int k, iArraysize;
-            int CID, VID;
-            long i64IniSec, i64EndSec;
-            string csAux, csAux2;
-            CFILE inFile;
-            CFILE fout;
-            long i64;
-            bool bMyCell;
-            int iRet;
-            uint dwCellDuration;
-            int nFrames;
-
-
-            if (nPGC >= FileInfo.m_nMPGCs)
-            {
-                Util.MyErrorBox("Error: PGC does not exist");
-                m_bInProcess = false;
-                return -1;
-            }
-
-            IniDemuxGlobalVars();
-            if (OpenVideoFile()) return -1;
-            m_bInProcess = true;
-
-            // Calculate  the total number of sectors
-            nTotalSectors = 0;
-            iArraysize = FileInfo.m_MADT_Cell_list.GetSize();
-            for (nCell = 0; nCell < FileInfo.m_nMCells[nPGC]; nCell++)
-            {
-                VID = Util.GetNbytes(2, FileInfo.m_pIFO.AtIndex(FileInfo.m_M_C_POST[nPGC] + 4 * nCell));
-                CID = FileInfo.m_pIFO[FileInfo.m_M_C_POST[nPGC] + 3 + 4 * nCell];
-                for (k = 0; k < iArraysize; k++)
-                {
-                    if (CID == FileInfo.m_MADT_Cell_list[k].CID &&
-                        VID == FileInfo.m_MADT_Cell_list[k].VID)
-                    {
-                        nTotalSectors += FileInfo.m_MADT_Cell_list[k].iSize;
-                    }
-                }
-            }
-
-            nSector = 0;
-            iRet = 0;
-
-            for (nCell = 0; nCell < FileInfo.m_nMCells[nPGC] && m_bInProcess == true; nCell++)
-            {
-                VID = Util.GetNbytes(2, FileInfo.m_pIFO.AtIndex(FileInfo.m_M_C_POST[nPGC] + 4 * nCell));
-                CID = FileInfo.m_pIFO[FileInfo.m_M_C_POST[nPGC] + 3 + 4 * nCell];
-
-                i64IniSec = Util.GetNbytes(4, FileInfo.m_pIFO.AtIndex(FileInfo.m_M_C_PBKT[nPGC] + nCell * 24 + 8));
-                i64EndSec = Util.GetNbytes(4, FileInfo.m_pIFO.AtIndex(FileInfo.m_M_C_PBKT[nPGC] + nCell * 24 + 0x14));
-
-                if (FileInfo.m_bVMGM)
-                {
-                    csAux2 = Options.m_csInputIFO[..^3];
-                    csAux = csAux2 + "VOB";
-                }
-                else
-                {
-                    csAux2 = Options.m_csInputIFO[..^5];
-                    csAux = csAux2 + "0.VOB";
-                }
-                inFile = CFILE.OpenRead(FileReader, csAux);
-                if (inFile == null)
-                {
-                    Util.MyErrorBox("Error opening input VOB: " + csAux);
-                    m_bInProcess = false;
-                    iRet = -1;
-                }
-                if (m_bInProcess) inFile.fseek((long)((i64IniSec) * 2048), SeekOrigin.Begin);
-
-                for (i64 = 0, bMyCell = true; i64 < (i64EndSec - i64IniSec + 1) && m_bInProcess == true; i64++)
-                {
-                    //readpack
-                    if ((i64 % MODUPDATE) == 0) UpdateProgress(pDlg, (int)((100 * nSector) / nTotalSectors));
-                    if (Util.readbuffer(m_buffer, inFile) != 2048)
-                    {
-                        if (inFile != null) inFile.fclose();
-                        Util.MyErrorBox("Input error: Reached end of VOB too early");
-                        m_bInProcess = false;
-                        iRet = -1;
-                    }
-
-                    if (m_bInProcess == true)
-                    {
-                        if (Util.IsSynch(m_buffer) != true)
-                        {
-                            Util.MyErrorBox("Error reading input VOB: Unsynchronized");
-                            m_bInProcess = false;
-                            iRet = -1;
-                        }
-                        if (Util.IsNav(m_buffer))
-                        {
-                            if (m_buffer[0x420] == (byte)(VID % 256) &&
-                                m_buffer[0x41F] == (byte)(VID / 256) &&
-                                m_buffer[0x422] == (byte)CID)
-                                bMyCell = true;
-                            else
-                                bMyCell = false;
-                        }
-
-                        if (bMyCell)
-                        {
-                            nSector++;
-                            iRet = ProcessPack(true);
-                        }
-                    }
-                } // For readpacks
-                if (inFile != null) inFile.fclose();
-                inFile = null;
-            }   // For Cells 
-
-            CloseAndNull();
-
-            nFrames = 0;
-
-            if (Options.m_bCheckCellt && m_bInProcess == true)
-            {
-                csAux = Path.Combine(Options.m_csOutputPath, "Celltimes.txt");
-                fout = CFILE.OpenWrite(csAux);
-                for (nCell = 0; nCell < FileInfo.m_nMCells[nPGC] && m_bInProcess == true; nCell++)
-                {
-                    dwCellDuration = (uint)Util.GetNbytes(4, FileInfo.m_pIFO.AtIndex(FileInfo.m_M_C_PBKT[nPGC] + 24 * nCell + 4));
-                    nFrames += Util.DurationInFrames(dwCellDuration);
-                    if (nCell != (FileInfo.m_nMCells[nPGC] - 1) || Options.m_bCheckEndTime)
-                        fout.fprintf($"{nFrames}\n");
-                }
-                fout.fclose();
-            }
-
-            m_nTotalFrames = nFrames;
-
-            if (Options.m_bCheckLog && m_bInProcess == true) OutputLog(nPGC, 1, DomainType.Menus);
+            if (Options.m_bCheckLog && m_bInProcess == true) OutputLog(nPGC, Options.m_nSelAng, Options.m_iDomain);
 
             return iRet;
         }
