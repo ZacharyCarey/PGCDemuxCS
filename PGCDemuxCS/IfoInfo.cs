@@ -79,6 +79,9 @@ namespace PgcDemuxCS
         /// The number of detected VOB files
         /// </summary>
         public int m_nVobFiles;
+        
+        public readonly int VtsNumber;
+        public bool IsVMG => VtsNumber == 0; // TODO replace m_bVMGM
 
         public IfoInfo(IIfoFileReader reader, PgcDemuxOptions options)
         {
@@ -103,12 +106,16 @@ namespace PgcDemuxCS
                 throw new ArgumentException("Invalid input file");
             }
 
-            if (ifoName == "VIDEO_TS.IFO") {
+            if (ifoName == "VIDEO_TS.IFO")
+            {
                 m_bVMGM = true;
                 options.Domain = DomainType.Menus;
-            } else
+                VtsNumber = 0;
+            }
+            else
             {
                 m_bVMGM = false;
+                VtsNumber = int.Parse(ifoName[4..6]);
             }
 
             inFile = CFILE.OpenRead(reader, ifoName);

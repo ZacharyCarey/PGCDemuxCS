@@ -204,12 +204,13 @@ namespace UnitTesting
                 {
                     using (Stream actualStream = File.OpenRead(actualFilePath))
                     {
+                        Assert.AreEqual(expectedStream.Length, actualStream.Length, "File sizes did not match.");
                         bool eof = false;
                         while (!eof)
                         {
                             int expectedCount = expectedStream.Read(expectedBuffer, 0, expectedBuffer.Length);
                             int actualCount = actualStream.Read(actualBuffer, 0, actualBuffer.Length);
-                            Assert.IsTrue(expectedCount == actualCount, errMsg);
+                            Assert.IsTrue(expectedCount == actualCount, "Read different amount of bytes from the files.");
                             if (expectedCount == 0 || actualCount == 0) eof = true;
                             Assert.IsTrue(expectedBuffer.SequenceEqual(actualBuffer), errMsg);
                         }

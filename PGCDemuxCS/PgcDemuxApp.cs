@@ -191,10 +191,9 @@ namespace PgcDemuxCS
             int nSector, nCell;
             int k, iArraysize;
             int CID, VID;
-            long i64IniSec, i64EndSec, i64sectors;
-            int nVobin = 0;
+            long i64IniSec, i64EndSec;
             string csAux, csAux2;
-            CFILE inFile;
+            VobStream vobStream = new VobStream(FileInfo, FileReader, Options.m_iDomain);
             CFILE fout;
             long i64;
             bool bMyCell;
@@ -274,73 +273,17 @@ namespace PgcDemuxCS
 
                     i64IniSec = Util.GetNbytes(4, FileInfo.m_pIFO.AtIndex(m_C_PBKT[nPGC] + nCell * 24 + 8));
                     i64EndSec = Util.GetNbytes(4, FileInfo.m_pIFO.AtIndex(m_C_PBKT[nPGC] + nCell * 24 + 0x14));
-                    if (Options.m_iDomain == DomainType.Titles)
-                    {
-                        for (k = 1, i64sectors = 0; k < 10; k++)
-                        {
-                            i64sectors += (FileInfo.m_i64VOBSize[k] / 2048);
-                            if (i64IniSec < i64sectors)
-                            {
-                                i64sectors -= (FileInfo.m_i64VOBSize[k] / 2048);
-                                nVobin = k;
-                                k = 20;
-                            }
-                        }
-
-                        // TODO create a function for this
-                        csAux2 = Options.m_csInputIFO[..^5];
-                        csAux = $"{nVobin}.VOB";
-                        csAux = csAux2 + csAux;
-                    }
-                    else
-                    {
-                        if (FileInfo.m_bVMGM)
-                        {
-                            csAux2 = Options.m_csInputIFO[..^3];
-                            csAux = csAux2 + "VOB";
-                        }
-                        else
-                        {
-                            csAux2 = Options.m_csInputIFO[..^5];
-                            csAux = csAux2 + "0.VOB";
-                        }
-                        i64sectors = 0;
-                    }
-
-                    inFile = CFILE.OpenRead(FileReader, csAux);
-                    if (inFile == null)
-                    {
-                        Util.MyErrorBox("Error opening input VOB: " + csAux);
-                        m_bInProcess = false;
-                        iRet = -1;
-                    }
-                    if (m_bInProcess) inFile.fseek((long)((i64IniSec - i64sectors) * 2048), SeekOrigin.Begin);
+                    vobStream.Seek(i64IniSec * 2048, SeekOrigin.Begin);
 
                     for (i64 = 0, bMyCell = true; i64 < (i64EndSec - i64IniSec + 1) && m_bInProcess == true; i64++)
                     {
                         //readpack
                         if ((i64 % MODUPDATE) == 0) UpdateProgress(pDlg, (int)((100 * nSector) / nTotalSectors));
-                        if (Util.readbuffer(m_buffer, inFile) != 2048)
+                        if (m_buffer.ReadFromStream(vobStream, 2048) != 2048)
                         {
-                            bool failed = true;
-                            if (inFile != null) inFile.fclose();
-
-                            if (Options.m_iDomain == DomainType.Titles)
-                            {
-                                nVobin++;
-                                csAux2 = Options.m_csInputIFO[..^5];
-                                csAux = $"{nVobin}.VOB";
-                                csAux = csAux2 + csAux;
-                                inFile = CFILE.OpenRead(FileReader, csAux);
-                                failed = (Util.readbuffer(m_buffer, inFile) != 2048);
-                            }
-
-                            if (failed)
-                            {
-                                Util.MyErrorBox("Input error: Reached end of VOB too early");
-                                m_bInProcess = false;
-                                iRet = -1;
-                            }
+                            Util.MyErrorBox("Input error: Reached end of VOB too early");
+                            m_bInProcess = false;
+                            iRet = -1;
                         }
 
                         if (m_bInProcess == true)
@@ -368,11 +311,12 @@ namespace PgcDemuxCS
                             }
                         }
                     } // For readpacks
-                    if (inFile != null) inFile.fclose();
-                    inFile = null;
                 }
                 if (iCat == 0xD0) nCurrAngle = 0;
             }   // For Cells 
+
+            if (vobStream != null) vobStream.Close();
+            vobStream = null;
 
             CloseAndNull();
 
@@ -417,6 +361,7 @@ namespace PgcDemuxCS
 
             return iRet;
         }
+        
         public virtual int VIDDemux(int nVid, object pDlg, ref CArray<ADT_VID_LIST> m_AADT_Vid_list, ref CArray<ADT_CELL_LIST> m_AADT_Cell_list)
         {
             int nTotalSectors;
@@ -424,10 +369,9 @@ namespace PgcDemuxCS
             int k, iArraysize;
             int CID, VID, nDemuxedVID;
             long i64IniSec, i64EndSec;
-            long i64sectors = 0;
             int nVobin = 0;
             string csAux, csAux2;
-            CFILE inFile;
+            VobStream vobStream = new VobStream(FileInfo, FileReader, Options.m_iDomain);
             CFILE fout;
             long i64;
             bool bMyCell;
@@ -463,69 +407,17 @@ namespace PgcDemuxCS
                     i64IniSec = m_AADT_Cell_list[nCell].iIniSec;
                     i64EndSec = m_AADT_Cell_list[nCell].iEndSec;
 
-                    if (Options.m_iDomain == DomainType.Titles)
-                    {
-                        for (k = 1, i64sectors = 0; k < 10; k++)
-                        {
-                            i64sectors += (FileInfo.m_i64VOBSize[k] / 2048);
-                            if (i64IniSec < i64sectors)
-                            {
-                                i64sectors -= (FileInfo.m_i64VOBSize[k] / 2048);
-                                nVobin = k;
-                                k = 20;
-                            }
-                        }
-                        csAux2 = Options.m_csInputIFO[..^5];
-                        csAux = $"{nVobin}.VOB";
-                        csAux = csAux2 + csAux;
-                    }
-                    else
-                    {
-                        if (FileInfo.m_bVMGM)
-                        {
-                            csAux2 = Options.m_csInputIFO[..^3];
-                            csAux = csAux2 + "VOB";
-                        }
-                        else
-                        {
-                            csAux2 = Options.m_csInputIFO[..^5];
-                            csAux = csAux2 + "0.VOB";
-                        }
-                    }
-
-                    inFile = CFILE.OpenRead(FileReader, csAux);
-                    if (inFile == null)
-                    {
-                        Util.MyErrorBox("Error opening input VOB: " + csAux);
-                        m_bInProcess = false;
-                        iRet = -1;
-                    }
-                    if (m_bInProcess) inFile.fseek((long)((i64IniSec - i64sectors) * 2048), SeekOrigin.Begin);
-
+                    vobStream.Seek((long)(i64IniSec * 2048), SeekOrigin.Begin);
                     for (i64 = 0, bMyCell = true; i64 < (i64EndSec - i64IniSec + 1) && m_bInProcess == true; i64++)
                     {
                         //readpack
                         if ((i64 % MODUPDATE) == 0) UpdateProgress(pDlg, (int)((100 * nSector) / nTotalSectors));
-                        if (Util.readbuffer(m_buffer, inFile) != 2048)
+                        if (m_buffer.ReadFromStream(vobStream, 2048) != 2048)
                         {
-                            if (inFile != null) inFile.fclose();
-                            bool error = true;
-                            if (Options.m_iDomain == DomainType.Titles)
-                            {
-                                nVobin++;
-                                csAux2 = Options.m_csInputIFO[..^5];
-                                csAux = $"{nVobin}.VOB";
-                                csAux = csAux2 + csAux;
-                                inFile = CFILE.OpenRead(FileReader, csAux);
-                                error = Util.readbuffer(m_buffer, inFile) != 2048;
-                            }
-                            
-                            if (error)
-                            {
-                                Util.MyErrorBox("Input error: Reached end of VOB too early");
-                                m_bInProcess = false;
-                                iRet = -1;
-                            }
+
+                            Util.MyErrorBox("Input error: Reached end of VOB too early");
+                            m_bInProcess = false;
+                            iRet = -1;
                         }
 
                         if (m_bInProcess == true)
@@ -553,11 +445,11 @@ namespace PgcDemuxCS
                             }
                         }
                     } // For readpacks
-                    if (inFile != null) inFile.fclose();
-                    inFile = null;
                 }  // if (VID== DemuxedVID)
             }   // For Cells 
 
+            vobStream.Close();
+            vobStream = null;
             CloseAndNull();
             nFrames = 0;
 
@@ -604,10 +496,9 @@ namespace PgcDemuxCS
             int k;
             int CID, VID;
             long i64IniSec, i64EndSec;
-            long i64sectors = 0;
             int nVobin = 0;
             string csAux, csAux2;
-            CFILE inFile;
+            VobStream vobStream = new VobStream(FileInfo, FileReader, Options.m_iDomain);
             CFILE fout;
             long i64;
             bool bMyCell;
@@ -636,69 +527,16 @@ namespace PgcDemuxCS
             i64IniSec = m_AADT_Cell_list[nCell].iIniSec;
             i64EndSec = m_AADT_Cell_list[nCell].iEndSec;
 
-            if (Options.m_iDomain == DomainType.Titles)
-            {
-                for (k = 1, i64sectors = 0; k < 10; k++)
-                {
-                    i64sectors += (FileInfo.m_i64VOBSize[k] / 2048);
-                    if (i64IniSec < i64sectors)
-                    {
-                        i64sectors -= (FileInfo.m_i64VOBSize[k] / 2048);
-                        nVobin = k;
-                        k = 20;
-                    }
-                }
-                csAux2 = Options.m_csInputIFO[..^5];
-                csAux = $"{nVobin}.VOB";
-                csAux = csAux2 + csAux;
-            }
-            else
-            {
-                if (FileInfo.m_bVMGM)
-                {
-                    csAux2 = Options.m_csInputIFO[..^3];
-                    csAux = csAux2 + "VOB";
-                }
-                else
-                {
-                    csAux2 = Options.m_csInputIFO[..^5];
-                    csAux = csAux2 + "0.VOB";
-                }
-            }
-
-            inFile = CFILE.OpenRead(FileReader, csAux);
-            if (inFile == null)
-            {
-                Util.MyErrorBox("Error opening input VOB: " + csAux);
-                m_bInProcess = false;
-                iRet = -1;
-            }
-            if (m_bInProcess) inFile.fseek((long)((i64IniSec - i64sectors) * 2048), SeekOrigin.Begin);
-
+            vobStream.Seek((long)(i64IniSec * 2048), SeekOrigin.Begin);
             for (i64 = 0, bMyCell = true; i64 < (i64EndSec - i64IniSec + 1) && m_bInProcess == true; i64++)
             {
                 //readpack
                 if ((i64 % MODUPDATE) == 0) UpdateProgress(pDlg, (int)((100 * nSector) / nTotalSectors));
-                if (Util.readbuffer(m_buffer, inFile) != 2048)
+                if (m_buffer.ReadFromStream(vobStream, 2048) != 2048)
                 {
-                    if (inFile != null) inFile.fclose();
-                    bool error = true;
-                    if (Options.m_iDomain == DomainType.Titles)
-                    {
-                        nVobin++;
-                        csAux2 = Options.m_csInputIFO[..^5];
-                        csAux = $"{nVobin}.VOB";
-                        csAux = csAux2 + csAux;
-                        inFile = CFILE.OpenRead(FileReader, csAux);
-                        error = Util.readbuffer(m_buffer, inFile) != 2048;
-                    }
-                    
-                    if (error)
-                    {
-                        Util.MyErrorBox("Input error: Reached end of VOB too early");
-                        m_bInProcess = false;
-                        iRet = -1;
-                    }
+                    Util.MyErrorBox("Input error: Reached end of VOB too early");
+                    m_bInProcess = false;
+                    iRet = -1;
                 }
 
                 if (m_bInProcess == true)
@@ -726,9 +564,9 @@ namespace PgcDemuxCS
                     }
                 }
             } // For readpacks
-            if (inFile != null) inFile.fclose();
-            inFile = null;
 
+            vobStream.Close();
+            vobStream = null;
             CloseAndNull();
 
             nFrames = 0;
