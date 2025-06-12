@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PGCDemuxCS
+namespace PgcDemuxCS
 {
     public class PgcDemuxOptions
     {

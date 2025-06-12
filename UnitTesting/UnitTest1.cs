@@ -1,5 +1,5 @@
 using PgcDemuxCS;
-using PGCDemuxCS;
+using PgcDemuxCS;
 using System.Diagnostics;
 
 namespace UnitTesting

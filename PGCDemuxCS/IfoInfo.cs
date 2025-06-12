@@ -1,5 +1,5 @@
 ﻿using PgcDemuxCS;
-using PGCDemuxCS;
+using PgcDemuxCS;
 using System;
 using System.Collections.Generic;
 using System.Linq;

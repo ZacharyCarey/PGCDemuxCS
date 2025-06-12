@@ -1,4 +1,4 @@
-using PGCDemuxCS;
+using PgcDemuxCS;
 
 namespace PgcDemuxCS
 {

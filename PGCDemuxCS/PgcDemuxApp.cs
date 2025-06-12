@@ -1,4 +1,4 @@
-using PGCDemuxCS;
+using PgcDemuxCS;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
