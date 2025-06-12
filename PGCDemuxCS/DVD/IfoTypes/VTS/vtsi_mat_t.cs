@@ -89,16 +89,12 @@ namespace PgcDemuxCS.DVD.IfoTypes.VTS
         /// </summary>
         internal byte nr_of_vtsm_audio_streams;
         internal audio_attr_t? vtsm_audio_attr = null;
-        internal byte[] zero_15 = new byte[audio_attr_t.Size * 7];
-        internal byte[] zero_16 = new byte[17];
 
         /// <summary>
         /// should be 0 or 1
         /// </summary>
         internal byte nr_of_vtsm_subp_streams;
         internal subp_attr_t? vtsm_subp_attr = null;
-        internal byte[] zero_17 = new byte[27 * subp_attr_t.Size];
-        internal byte[] zero_18 = new byte[2];
 
         internal video_attr_t vts_video_attr;
         internal byte zero_19;
@@ -147,19 +143,15 @@ namespace PgcDemuxCS.DVD.IfoTypes.VTS
             file.Read(zero_13);
             vtsm_video_attr = new(file);
             zero_14 = file.Read<byte>();
+
             nr_of_vtsm_audio_streams = file.Read<byte>();
-
             if (nr_of_vtsm_audio_streams == 1) vtsm_audio_attr = new audio_attr_t(file);
-            else file.Seek(file.Position + audio_attr_t.Size, SeekOrigin.Begin);
 
-            file.Read(zero_16);
+            file.Seek(0x154, SeekOrigin.Begin);
             nr_of_vtsm_subp_streams = file.Read<byte>();
-
             if (nr_of_vtsm_subp_streams == 1) vtsm_subp_attr = new subp_attr_t(file);
-            else file.Seek(file.Position + subp_attr_t.Size, SeekOrigin.Begin);
 
-            file.Read(zero_17);
-            file.Read(zero_18);
+            file.Seek(0x200, SeekOrigin.Begin);
             vts_video_attr = new video_attr_t(file);
             zero_19 = file.Read<byte>();
             nr_of_vts_audio_streams = file.Read<byte>();
@@ -208,10 +200,6 @@ namespace PgcDemuxCS.DVD.IfoTypes.VTS
             DvdUtils.CHECK_ZERO(zero_12);
             DvdUtils.CHECK_ZERO(zero_13);
             DvdUtils.CHECK_ZERO(zero_14);
-            DvdUtils.CHECK_ZERO(zero_15);
-            DvdUtils.CHECK_ZERO(zero_16);
-            DvdUtils.CHECK_ZERO(zero_17);
-            DvdUtils.CHECK_ZERO(zero_18);
             DvdUtils.CHECK_ZERO(zero_19);
             DvdUtils.CHECK_ZERO(zero_20);
             DvdUtils.CHECK_ZERO(zero_21);

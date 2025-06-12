@@ -10,22 +10,22 @@ namespace PgcDemuxCS.DVD
 
         public static void B2N_16(ref ushort x)
         {
-            x = (ushort)(((x & 0xFF00) >> 8) | ((x & 0x00FF) << 8));
+            //x = (ushort)(((x & 0xFF00) >> 8) | ((x & 0x00FF) << 8));
         }
 
         public static void B2N_32(ref uint x)
         {
-            x = (uint)(
+            /*x = (uint)(
                 ((x & 0xFF000000) >> 24) |
                 ((x & 0x00FF0000) >> 8) |
                 ((x & 0x0000FF00) << 8) |
                 ((x & 0x000000FF) << 24)
-            );
+            );*/
         }
 
         public static void B2N_64(ref ulong x)
         {
-            x = (uint)(
+            /*x = (uint)(
                 ((x & 0xFF00000000000000) >> 56) |
                 ((x & 0x00FF000000000000) >> 40) |
                 ((x & 0x0000FF0000000000) >> 24) |
@@ -34,7 +34,7 @@ namespace PgcDemuxCS.DVD
                 ((x & 0x0000000000FF0000) << 24) |
                 ((x & 0x000000000000FF00) << 40) |
                 ((x & 0x00000000000000FF) << 56)
-            );
+            );*/
         }
 
         public static void CHECK_VALUE(bool value)

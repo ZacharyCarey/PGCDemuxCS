@@ -12,7 +12,7 @@ using PgcDemuxCS.DVD.IfoTypes.VTS;
  * VIDEO_TS.[IFO,BUP] file, and the VTSI, or Video Title Set Information, which
  * is read in from the VTS_XX_0.[IFO,BUP] files.
  */
-internal class ifo_handle_t
+public class ifo_handle_t
 {
     /* VMGI */
     internal vmgi_mat_t? vmgi_mat = null;
@@ -41,49 +41,51 @@ internal class ifo_handle_t
         if (title == 0) filename = $"VIDEO_TS.{(backup ? "BUP" : "IFO")}";
         else filename = $"VTS_{title:00}_0.{(backup ? "BUP" : "IFO")}";
 
-        Stream file = reader.OpenFile(filename);
-
-        /* First check if this is a VMGI file. */
-        if (vmgi_mat_t.ifoRead_VMG(file, out vmgi_mat))
+        using (Stream file = reader.OpenFile(filename))
         {
 
-            /* These are both mandatory. */
-            if (!pgc_t.ifoRead_FP_PGC(this, file, out first_play_pgc) || !tt_srpt_t.ifoRead_TT_SRPT(this, file, out tt_srpt))
-                goto ifoOpen_fail;
+            /* First check if this is a VMGI file. */
+            if (vmgi_mat_t.ifoRead_VMG(file, out vmgi_mat))
+            {
 
-            pgci_ut_t.ifoRead_PGCI_UT(this, file, out pgci_ut);
-            ptl_mait_t.ifoRead_PTL_MAIT(this, file, out ptl_mait);
+                /* These are both mandatory. */
+                if (!pgc_t.ifoRead_FP_PGC(this, file, out first_play_pgc) || !tt_srpt_t.ifoRead_TT_SRPT(this, file, out tt_srpt))
+                    goto ifoOpen_fail;
 
-            /* This is also mandatory. */
-            if (!vts_atrt_t.ifoRead_VTS_ATRT(file, vmgi_mat.vts_atrt, out vts_atrt))
-                goto ifoOpen_fail;
+                pgci_ut_t.ifoRead_PGCI_UT(this, file, out pgci_ut);
+                ptl_mait_t.ifoRead_PTL_MAIT(this, file, out ptl_mait);
 
-            if (vmgi_mat.txtdt_mgi != 0) txtdt_mgi_t.ifoRead_TXTDT_MGI(file, vmgi_mat.txtdt_mgi, out txtdt_mgi);
-            if (vmgi_mat.vmgm_c_adt != 0) c_adt_t.ifoRead_C_ADT(file, vmgi_mat.vmgm_c_adt, out menu_c_adt);
-            if (vmgi_mat.vmgm_vobu_admap != 0) vobu_admap_t.ifoRead_VOBU_ADMAP(file, vmgi_mat.vmgm_vobu_admap, out menu_vobu_admap);
+                /* This is also mandatory. */
+                if (!vts_atrt_t.ifoRead_VTS_ATRT(file, vmgi_mat.vts_atrt, out vts_atrt))
+                    goto ifoOpen_fail;
 
-            return;
+                if (vmgi_mat.txtdt_mgi != 0) txtdt_mgi_t.ifoRead_TXTDT_MGI(file, vmgi_mat.txtdt_mgi, out txtdt_mgi);
+                if (vmgi_mat.vmgm_c_adt != 0) c_adt_t.ifoRead_C_ADT(file, vmgi_mat.vmgm_c_adt, out menu_c_adt);
+                if (vmgi_mat.vmgm_vobu_admap != 0) vobu_admap_t.ifoRead_VOBU_ADMAP(file, vmgi_mat.vmgm_vobu_admap, out menu_vobu_admap);
+
+                return;
+            }
+
+            if (vtsi_mat_t.ifoRead_VTS(file, out vtsi_mat))
+            {
+
+                if (!vts_ptt_srpt_t.ifoRead_VTS_PTT_SRPT(file, vtsi_mat.vts_ptt_srpt, out vts_ptt_srpt) || !pgcit_t.ifoRead_PGCIT(file, vtsi_mat.vts_pgcit, out vts_pgcit))
+                    goto ifoOpen_fail;
+
+                pgci_ut_t.ifoRead_PGCI_UT(this, file, out pgci_ut);
+                if (vtsi_mat.vts_tmapt != 0) vts_tmapt_t.ifoRead_VTS_TMAPT(file, vtsi_mat.vts_tmapt, out vts_tmapt);
+                if (vtsi_mat.vtsm_c_adt != 0) c_adt_t.ifoRead_C_ADT(file, vtsi_mat.vtsm_c_adt, out menu_c_adt);
+                if (vtsi_mat.vtsm_vobu_admap != 0) vobu_admap_t.ifoRead_VOBU_ADMAP(file, vtsi_mat.vtsm_vobu_admap, out menu_vobu_admap);
+
+                if (!c_adt_t.ifoRead_C_ADT(file, vtsi_mat.vts_c_adt, out vts_c_adt) || !vobu_admap_t.ifoRead_VOBU_ADMAP(file, vtsi_mat.vts_vobu_admap, out vts_vobu_admap))
+                    goto ifoOpen_fail;
+
+                return;
+            }
+
+        ifoOpen_fail:
+            throw new IOException($"Invalid IFO for title {title}.");
         }
-
-        if (vtsi_mat_t.ifoRead_VTS(file, out vtsi_mat))
-        {
-
-            if (!vts_ptt_srpt_t.ifoRead_VTS_PTT_SRPT(file, vtsi_mat.vts_ptt_srpt, out vts_ptt_srpt) || !pgcit_t.ifoRead_PGCIT(file, vtsi_mat.vts_pgcit, out vts_pgcit))
-                goto ifoOpen_fail;
-
-            pgci_ut_t.ifoRead_PGCI_UT(this, file, out pgci_ut);
-            if (vtsi_mat.vts_tmapt != 0) vts_tmapt_t.ifoRead_VTS_TMAPT(file, vtsi_mat.vts_tmapt, out vts_tmapt);
-            if (vtsi_mat.vtsm_c_adt != 0) c_adt_t.ifoRead_C_ADT(file, vtsi_mat.vtsm_c_adt, out menu_c_adt);
-            if (vtsi_mat.vtsm_vobu_admap != 0) vobu_admap_t.ifoRead_VOBU_ADMAP(file, vtsi_mat.vtsm_vobu_admap, out menu_vobu_admap);
-
-            if (!c_adt_t.ifoRead_C_ADT(file, vtsi_mat.vts_c_adt, out vts_c_adt) || !vobu_admap_t.ifoRead_VOBU_ADMAP(file, vtsi_mat.vts_vobu_admap, out vts_vobu_admap))
-                goto ifoOpen_fail;
-
-            return;
-        }
-
-    ifoOpen_fail:
-        throw new IOException($"Invalid IFO for title {title}.");
     }
 
     /// <summary>

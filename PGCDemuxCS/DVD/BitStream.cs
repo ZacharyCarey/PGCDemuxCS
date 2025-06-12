@@ -67,6 +67,7 @@ namespace PgcDemuxCS.DVD
             int n = Stream.ReadByte();
             if (n < 0) throw new IOException();
             buffer = (byte)n;
+            bits = 8;
         }
 
         public bool ReadBit()
@@ -82,6 +83,7 @@ namespace PgcDemuxCS.DVD
             while (bitCount > 0)
             {
                 result = (result << 1) | (ReadBit() ? T.One : T.Zero);
+                bitCount--;
             }
             return result;
         }
