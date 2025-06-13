@@ -1,4 +1,4 @@
-using PGCDemuxCS;
+using PgcDemuxCS;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
@@ -205,7 +205,7 @@ namespace PgcDemuxCS
             IEnumerable<CellID> cells = GetPgcCells(nPGC, domainInfo);
             if (Options.m_iDomain == DomainType.Titles)
             {
-                cells = cells.SelectAngle(nPGC, Options.m_nSelAng, FileInfo.m_pIFO, domainInfo);
+                cells = cells.SelectAngle(nPGC, Options.m_nSelAng, domainInfo);
             }
 
             nTotalSectors = cells.Sum(x => x.Size);
@@ -1076,8 +1076,8 @@ namespace PgcDemuxCS
                     return -1;
                 }
                 nCell = 0;
-                VID = Util.GetNbytes(2, FileInfo.m_pIFO.AtIndex(domainInfo.m_C_POST[nSelection] + 4 * nCell));
-                CID = FileInfo.m_pIFO[domainInfo.m_C_POST[nSelection] + 3 + 4 * nCell];
+                VID = domainInfo.m_C_POST[nSelection][nCell].vob_id_nr;
+                CID = domainInfo.m_C_POST[nSelection][nCell].cell_nr;
             }
             else if (iMode == ModeType.VID)
             {
@@ -1225,12 +1225,12 @@ namespace PgcDemuxCS
         {
             for (int nCell = 0; nCell < domainInfo.m_nCells[nPGC]; nCell++)
             {
-                int VID = Util.GetNbytes(2, FileInfo.m_pIFO.AtIndex(domainInfo.m_C_POST[nPGC] + 4 * nCell));
-                int CID = FileInfo.m_pIFO[domainInfo.m_C_POST[nPGC] + 3 + 4 * nCell];
-                long iIniSec = Util.GetNbytes(4, FileInfo.m_pIFO.AtIndex(domainInfo.m_C_PBKT[nPGC] + nCell * 24 + 8));
-                long iEndSec = Util.GetNbytes(4, FileInfo.m_pIFO.AtIndex(domainInfo.m_C_PBKT[nPGC] + nCell * 24 + 0x14));
+                int VID = domainInfo.m_C_POST[nPGC][nCell].vob_id_nr;
+                int CID = domainInfo.m_C_POST[nPGC][nCell].cell_nr;
+                long iIniSec = domainInfo.m_C_PBKT[nPGC][nCell].first_sector;
+                long iEndSec = domainInfo.m_C_PBKT[nPGC][nCell].last_sector;
                 int iSize = GetAllCells(domainInfo).SelectCID(VID, CID).Sum(x => x.Size);
-                ulong dwDuration = (uint)Util.GetNbytes(4, FileInfo.m_pIFO.AtIndex(domainInfo.m_C_PBKT[nPGC] + 24 * nCell + 4));
+                ulong dwDuration = (uint)domainInfo.m_C_PBKT[nPGC][nCell].playback_time.Raw;
                 yield return new CellID(nCell, VID, CID, iSize, iIniSec, iEndSec, dwDuration);
             }
         }
@@ -1248,14 +1248,14 @@ namespace PgcDemuxCS
     internal static class PgcDemuxExtensions
     {
         // TODO only run on titles/PGC
-        public static IEnumerable<CellID> SelectAngle(this IEnumerable<CellID> cells, int nPGC, int angle, Ref<byte> m_pIFO, DomainInfo domainInfo)
+        public static IEnumerable<CellID> SelectAngle(this IEnumerable<CellID> cells, int nPGC, int angle, DomainInfo domainInfo)
         {
             int nCurrAngle = 0;
             int iCat = 0;
             foreach (CellID cell in cells)
             {
                 // Check angle info
-                iCat = m_pIFO[domainInfo.m_C_PBKT[nPGC] + 24 * cell.Index];
+                iCat = domainInfo.m_C_PBKT[nPGC][cell.Index].iCat;
                 iCat = iCat & 0xF0;
                 //		0101=First; 1001=Middle ;	1101=Last
                 if (iCat == 0x50)

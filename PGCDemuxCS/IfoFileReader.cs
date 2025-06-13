@@ -14,7 +14,7 @@ namespace PgcDemuxCS
         public Stream OpenFile(string fileName);
     }
 
-    internal class SimpleIfoReader : IIfoFileReader
+    public class SimpleIfoReader : IIfoFileReader
     {
         private string RootPath;
 

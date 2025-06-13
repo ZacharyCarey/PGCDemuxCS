@@ -1,5 +1,5 @@
 ﻿using PgcDemuxCS;
-using PGCDemuxCS;
+using PgcDemuxCS;
 
 namespace TestProgram
 {

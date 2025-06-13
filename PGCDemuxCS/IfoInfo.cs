@@ -1,5 +1,7 @@
 ﻿using PgcDemuxCS;
-using PGCDemuxCS;
+using PgcDemuxCS;
+using PgcDemuxCS.DVD;
+using PgcDemuxCS.DVD.IfoTypes.Common;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,8 +18,8 @@ namespace PgcDemuxCS
         public int m_nPGCs;
 
         public int[] m_nCells = new int[IfoInfo.MAX_PGC];
-        public int[] m_C_POST = new int[IfoInfo.MAX_PGC];
-        public int[] m_C_PBKT = new int[IfoInfo.MAX_PGC];
+        public cell_position_t[][] m_C_POST = new cell_position_t[IfoInfo.MAX_PGC][];
+        public cell_playback_t[][] m_C_PBKT = new cell_playback_t[IfoInfo.MAX_PGC][];
 
         // Compiled list of menu and title cells
         public CArray<ADT_CELL_LIST> m_AADT_Cell_list = new();
@@ -34,17 +36,6 @@ namespace PgcDemuxCS
         internal const int MAX_MPGC = 32768;
         internal const int MAX_LU = 100;
 
-        /// <summary>
-        /// IFO file loaded into byte buffer
-        /// </summary>
-        public Ref<byte> m_pIFO = Ref<byte>.Null;
-
-        /// <summary>
-        /// Length of the loadedd IFO file.
-        /// See <see cref="m_pIFO"/>
-        /// </summary>
-        public int m_iIFOlen;
-
         public DomainInfo MenuInfo = new();
         public DomainInfo TitleInfo = new();
 
@@ -53,20 +44,20 @@ namespace PgcDemuxCS
         /// </summary>
         public bool m_bVMGM;
 
-        public int m_iVTS_PTT_SRPT, m_iVTS_PGCI, m_iVTS_C_ADT;
+        public c_adt_t? m_iVTS_C_ADT;
         public int m_iVTS_VOBU_ADMAP, m_iVTS_TMAPTI;
-        public int m_iVTSM_PGCI, m_iVTSM_C_ADT, m_iVTSM_VOBU_ADMAP;
+        public pgci_ut_t m_iVTSM_PGCI;
+        public c_adt_t m_iVTSM_C_ADT;
 
-        public readonly int[] m_iVTS_PGC = new int[MAX_PGC];
         public readonly int[] m_nAngles = new int[MAX_PGC];
 
         public readonly ulong[] m_dwDuration = new ulong[MAX_PGC];
         public readonly ulong[] m_dwMDuration = new ulong[MAX_MPGC];
 
-        public readonly int[] m_iVTSM_LU = new int[MAX_LU];
+        public readonly pgcit_t[] m_iVTSM_LU = new pgcit_t[MAX_LU];
         public readonly int[] m_nIniPGCinLU = new int[MAX_LU];
         public readonly int[] m_nPGCinLU = new int[MAX_LU];
-        public readonly int[] m_iMENU_PGC = new int[MAX_MPGC];
+        public readonly pgc_t[] m_iMENU_PGC = new pgc_t[MAX_MPGC];
         public readonly int[] m_nLU_MPGC = new int[MAX_MPGC];
 
         public int m_nLUs;
@@ -95,11 +86,9 @@ namespace PgcDemuxCS
             int nTotADT, nADT, VidADT, CidADT;
             int iArraysize;
             bool bAlready, bEndAngle;
-            CFILE inFile = null;
             int iIniSec, iEndSec;
             FileInfo statbuf;
             int iSize, iCat;
-            int iIFOSize = 0;
 
             string ifoName = options.m_csInputIFO.ToUpper();
             if ((ifoName[^6..] != "_0.IFO" || ifoName[..4] != "VTS_") && ifoName[^12..] != "VIDEO_TS.IFO")
@@ -120,33 +109,7 @@ namespace PgcDemuxCS
                 VtsNumber = int.Parse(ifoName[4..6]);
             }
 
-            inFile = CFILE.OpenRead(reader, ifoName);
-            if (inFile == null)
-            {
-                csAux = $"Unable to open {ifoName}";
-                Util.MyErrorBox(csAux);
-                throw new IOException(csAux);
-            }
-
-            iIFOSize = (int)inFile.Size;
-
-            if (iIFOSize > MAXLENGTH)
-            {
-                csAux = $"IFO too big {ifoName}";
-                Util.MyErrorBox(csAux);
-                inFile.fclose();
-                throw new IOException(csAux);
-            }
-
-            //if (m_pIFO!=null)  delete[]  m_pIFO;
-
-            m_pIFO = new ByteArrayRef(new byte[iIFOSize + 2048], 0);
-
-            // Read IFO
-            for (i = 0; !inFile.feof() && i < MAXLENGTH; i++)
-                m_pIFO[i] = (byte)inFile.fgetc();
-            m_iIFOlen = i - 1;
-            inFile.fclose();
+            ifo_handle_t ifo = ifo_handle_t.Open(reader, Path.GetFileNameWithoutExtension(ifoName));
 
             TitleInfo.m_AADT_Cell_list.RemoveAll();
             MenuInfo.m_AADT_Cell_list.RemoveAll();
@@ -157,28 +120,22 @@ namespace PgcDemuxCS
             // Get Title Cells
             if (m_bVMGM)
             {
-                m_iVTS_PTT_SRPT = 0;
-                m_iVTS_PGCI = 0;
-                m_iVTSM_PGCI = 2048 * Util.GetNbytes(4, m_pIFO.AtIndex(0xC8));
+                m_iVTSM_PGCI = ifo.pgci_ut;
                 m_iVTS_TMAPTI = 0;
-                m_iVTSM_C_ADT = 2048 * Util.GetNbytes(4, m_pIFO.AtIndex(0xD8));
-                m_iVTSM_VOBU_ADMAP = 2048 * Util.GetNbytes(4, m_pIFO.AtIndex(0xDC));
-                m_iVTS_C_ADT = 0;
+                m_iVTSM_C_ADT = ifo.menu_c_adt;
+                m_iVTS_C_ADT = null;
                 m_iVTS_VOBU_ADMAP = 0;
             }
             else
             {
-                m_iVTS_PTT_SRPT = 2048 * Util.GetNbytes(4, m_pIFO.AtIndex(0xC8));
-                m_iVTS_PGCI = 2048 * Util.GetNbytes(4, m_pIFO.AtIndex(0xCC));
-                m_iVTSM_PGCI = 2048 * Util.GetNbytes(4, m_pIFO.AtIndex(0xD0));
-                m_iVTS_TMAPTI = 2048 * Util.GetNbytes(4, m_pIFO.AtIndex(0xD4));
-                m_iVTSM_C_ADT = 2048 * Util.GetNbytes(4, m_pIFO.AtIndex(0xD8));
-                m_iVTSM_VOBU_ADMAP = 2048 * Util.GetNbytes(4, m_pIFO.AtIndex(0xDC));
-                m_iVTS_C_ADT = 2048 * Util.GetNbytes(4, m_pIFO.AtIndex(0xE0));
-                m_iVTS_VOBU_ADMAP = 2048 * Util.GetNbytes(4, m_pIFO.AtIndex(0xE4));
+                m_iVTSM_PGCI = ifo.pgci_ut;
+                m_iVTS_TMAPTI = (int)(DvdUtils.DVD_BLOCK_LEN * ifo.vtsi_mat.vts_tmapt);
+                m_iVTSM_C_ADT = ifo.menu_c_adt;
+                m_iVTS_C_ADT = ifo.vts_c_adt;
+                m_iVTS_VOBU_ADMAP = (int)(DvdUtils.DVD_BLOCK_LEN * ifo.vtsi_mat.vts_vobu_admap);
             }
 
-            TitleInfo.m_nPGCs = m_bVMGM ? 0 : Util.GetNbytes(2, m_pIFO.AtIndex(m_iVTS_PGCI));
+            TitleInfo.m_nPGCs = m_bVMGM ? 0 : ifo.vts_pgcit.nr_of_pgci_srp;
 
             // Title PGCs	
             if (TitleInfo.m_nPGCs > MAX_PGC)
@@ -189,23 +146,20 @@ namespace PgcDemuxCS
             }
             for (k = 0; k < TitleInfo.m_nPGCs; k++)
             {
-                m_iVTS_PGC[k] = Util.GetNbytes(4, m_pIFO.AtIndex(m_iVTS_PGCI + 0x04 + (k + 1) * 8)) + m_iVTS_PGCI;
-                m_dwDuration[k] = (uint)Util.GetNbytes(4, m_pIFO.AtIndex(m_iVTS_PGC[k] + 4));
+                var pgc = ifo.vts_pgcit.pgci_srp[k].pgc;
+                m_dwDuration[k] = pgc.playback_time.Raw;
 
-                TitleInfo.m_C_PBKT[k] = Util.GetNbytes(2, m_pIFO.AtIndex(m_iVTS_PGC[k] + 0xE8));
-                if (TitleInfo.m_C_PBKT[k] != 0) TitleInfo.m_C_PBKT[k] += m_iVTS_PGC[k];
+                TitleInfo.m_C_PBKT[k] = (pgc.cell_playback_offset == 0) ? null : pgc.cell_playback;
+                TitleInfo.m_C_POST[k] = (pgc.cell_position_offset == 0) ? null : pgc.cell_position;
 
-                TitleInfo.m_C_POST[k] = Util.GetNbytes(2, m_pIFO.AtIndex(m_iVTS_PGC[k] + 0xEA));
-                if (TitleInfo.m_C_POST[k] != 0) TitleInfo.m_C_POST[k] += m_iVTS_PGC[k];
-
-                TitleInfo.m_nCells[k] = m_pIFO[m_iVTS_PGC[k] + 3];
+                TitleInfo.m_nCells[k] = ifo.vts_pgcit.pgci_srp[k].pgc.nr_of_cells;
 
 
                 m_nAngles[k] = 1;
 
                 for (nCell = 0, bEndAngle = false; nCell < TitleInfo.m_nCells[k] && bEndAngle == false; nCell++)
                 {
-                    iCat = Util.GetNbytes(1, m_pIFO.AtIndex(TitleInfo.m_C_PBKT[k] + 24 * nCell));
+                    iCat = ifo.vts_pgcit.pgci_srp[k].pgc.cell_playback[nCell].iCat;
                     iCat = iCat & 0xF0;
                     //			0101=First; 1001=Middle ;	1101=Last
                     if (iCat == 0x50)
@@ -222,10 +176,10 @@ namespace PgcDemuxCS
 
 
             // Menu PGCs
-            if (m_iVTSM_PGCI == 0)
+            if (m_iVTSM_PGCI == null)
                 m_nLUs = 0;
             else
-                m_nLUs = Util.GetNbytes(2, m_pIFO.AtIndex(m_iVTSM_PGCI));
+                m_nLUs = ifo.pgci_ut.nr_of_lus;
 
             MenuInfo.m_nPGCs = 0;
             if (m_nLUs > MAX_LU)
@@ -237,8 +191,8 @@ namespace PgcDemuxCS
 
             for (nLU = 0; nLU < m_nLUs; nLU++)
             {
-                m_iVTSM_LU[nLU] = Util.GetNbytes(4, m_pIFO.AtIndex(m_iVTSM_PGCI + 0x04 + (nLU + 1) * 8)) + m_iVTSM_PGCI;
-                m_nPGCinLU[nLU] = Util.GetNbytes(2, m_pIFO.AtIndex(m_iVTSM_LU[nLU]));
+                m_iVTSM_LU[nLU] = m_iVTSM_PGCI.lu[nLU].pgcit;
+                m_nPGCinLU[nLU] = m_iVTSM_LU[nLU].nr_of_pgci_srp;
                 m_nIniPGCinLU[nLU] = MenuInfo.m_nPGCs;
 
                 for (j = 0; j < m_nPGCinLU[nLU]; j++)
@@ -251,16 +205,14 @@ namespace PgcDemuxCS
                     }
                     nAbsPGC = j + MenuInfo.m_nPGCs;
                     m_nLU_MPGC[nAbsPGC] = nLU;
-                    m_iMENU_PGC[nAbsPGC] = Util.GetNbytes(4, m_pIFO.AtIndex(m_iVTSM_LU[nLU] + 0x04 + (j + 1) * 8)) + m_iVTSM_LU[nLU];
+                    m_iMENU_PGC[nAbsPGC] = m_iVTSM_LU[nLU].pgci_srp[j].pgc;
 
-                    MenuInfo.m_C_PBKT[nAbsPGC] = Util.GetNbytes(2, m_pIFO.AtIndex(m_iMENU_PGC[nAbsPGC] + 0xE8));
-                    if (MenuInfo.m_C_PBKT[nAbsPGC] != 0) MenuInfo.m_C_PBKT[nAbsPGC] += m_iMENU_PGC[nAbsPGC];
-                    MenuInfo.m_C_POST[nAbsPGC] = Util.GetNbytes(2, m_pIFO.AtIndex(m_iMENU_PGC[nAbsPGC] + 0xEA));
-                    if (MenuInfo.m_C_POST[nAbsPGC] != 0) MenuInfo.m_C_POST[nAbsPGC] += m_iMENU_PGC[nAbsPGC];
+                    MenuInfo.m_C_PBKT[nAbsPGC] = (m_iMENU_PGC[nAbsPGC].cell_playback_offset == 0) ? null : m_iMENU_PGC[nAbsPGC].cell_playback;
+                    MenuInfo.m_C_POST[nAbsPGC] = (m_iMENU_PGC[nAbsPGC].cell_position_offset == 0) ? null : m_iMENU_PGC[nAbsPGC].cell_position;
 
-                    MenuInfo.m_nCells[nAbsPGC] = m_pIFO[m_iMENU_PGC[nAbsPGC] + 3];
+                    MenuInfo.m_nCells[nAbsPGC] = m_iMENU_PGC[nAbsPGC].nr_of_cells;
 
-                    if ((MenuInfo.m_C_PBKT[nAbsPGC] == 0 || MenuInfo.m_C_POST[nAbsPGC] == 0) && MenuInfo.m_nCells[nAbsPGC] != 0)
+                    if ((MenuInfo.m_C_PBKT[nAbsPGC] == null || MenuInfo.m_C_POST[nAbsPGC] == null) && MenuInfo.m_nCells[nAbsPGC] != 0)
                     // There is something wrong...
                     {
                         MenuInfo.m_nCells[nAbsPGC] = 0;
@@ -268,7 +220,7 @@ namespace PgcDemuxCS
                         Util.MyErrorBox(csAux);
                         throw new IOException(csAux);
                     }
-                    m_dwMDuration[nAbsPGC] = (uint)Util.GetNbytes(4, m_pIFO.AtIndex(m_iMENU_PGC[nAbsPGC] + 4));
+                    m_dwMDuration[nAbsPGC] = m_iMENU_PGC[nAbsPGC].playback_time.Raw;
 
                 } // For PGCs
                 MenuInfo.m_nPGCs += m_nPGCinLU[nLU];
@@ -276,18 +228,17 @@ namespace PgcDemuxCS
 
 
             ///////////// VTS_C_ADT  ///////////////////////
-            if (m_iVTS_C_ADT == 0) nTotADT = 0;
+            if (m_iVTS_C_ADT == null) nTotADT = 0;
             else
             {
-                nTotADT = Util.GetNbytes(4, m_pIFO.AtIndex(m_iVTS_C_ADT + 4));
-                nTotADT = (nTotADT - 7) / 12;
+                nTotADT = m_iVTS_C_ADT.nr_of_vobs;
             }
 
             //Cells
             for (nADT = 0; nADT < nTotADT; nADT++)
             {
-                VidADT = Util.GetNbytes(2, m_pIFO.AtIndex(m_iVTS_C_ADT + 8 + 12 * nADT));
-                CidADT = m_pIFO[m_iVTS_C_ADT + 8 + 12 * nADT + 2];
+                VidADT = m_iVTS_C_ADT.cell_adr_table[nADT].vob_id;
+                CidADT = m_iVTS_C_ADT.cell_adr_table[nADT].cell_id;
 
                 iArraysize = TitleInfo.m_AADT_Cell_list.GetSize();
                 for (k = 0, bAlready = false; k < iArraysize; k++)
@@ -311,8 +262,8 @@ namespace PgcDemuxCS
                     //			m_AADT_Cell_list.SetAtGrow(iArraysize,myADT_Cell);
                     //			kk=iArraysize;
                 }
-                iIniSec = Util.GetNbytes(4, m_pIFO.AtIndex(m_iVTS_C_ADT + 8 + 12 * nADT + 4));
-                iEndSec = Util.GetNbytes(4, m_pIFO.AtIndex(m_iVTS_C_ADT + 8 + 12 * nADT + 8));
+                iIniSec = (int)m_iVTS_C_ADT.cell_adr_table[nADT].start_sector;
+                iEndSec = (int)m_iVTS_C_ADT.cell_adr_table[nADT].last_sector;
                 if (iIniSec < TitleInfo.m_AADT_Cell_list[kk].iIniSec) TitleInfo.m_AADT_Cell_list[kk].iIniSec = iIniSec;
                 if (iEndSec > TitleInfo.m_AADT_Cell_list[kk].iEndSec) TitleInfo.m_AADT_Cell_list[kk].iEndSec = iEndSec;
                 iSize = (iEndSec - iIniSec + 1);
@@ -320,18 +271,17 @@ namespace PgcDemuxCS
             }
 
             ///////////// VTSM_C_ADT  ///////////////////////
-            if (m_iVTSM_C_ADT == 0) nTotADT = 0;
+            if (m_iVTSM_C_ADT == null) nTotADT = 0;
             else
             {
-                nTotADT = Util.GetNbytes(4, m_pIFO.AtIndex(m_iVTSM_C_ADT + 4));
-                nTotADT = (nTotADT - 7) / 12;
+                nTotADT = m_iVTSM_C_ADT.nr_of_vobs;
             }
 
             // Cells
             for (nADT = 0; nADT < nTotADT; nADT++)
             {
-                VidADT = Util.GetNbytes(2, m_pIFO.AtIndex(m_iVTSM_C_ADT + 8 + 12 * nADT));
-                CidADT = m_pIFO[m_iVTSM_C_ADT + 8 + 12 * nADT + 2];
+                VidADT = m_iVTSM_C_ADT.cell_adr_table[nADT].vob_id;
+                CidADT = m_iVTSM_C_ADT.cell_adr_table[nADT].cell_id;
 
                 iArraysize = MenuInfo.m_AADT_Cell_list.GetSize();
                 for (k = 0, bAlready = false; k < iArraysize; k++)
@@ -355,15 +305,15 @@ namespace PgcDemuxCS
                     //			m_MADT_Cell_list.SetAtGrow(iArraysize,myADT_Cell);
                     //			kk=iArraysize;
                 }
-                iIniSec = Util.GetNbytes(4, m_pIFO.AtIndex(m_iVTSM_C_ADT + 8 + 12 * nADT + 4));
-                iEndSec = Util.GetNbytes(4, m_pIFO.AtIndex(m_iVTSM_C_ADT + 8 + 12 * nADT + 8));
+                iIniSec = (int)m_iVTSM_C_ADT.cell_adr_table[nADT].start_sector;
+                iEndSec = (int)m_iVTSM_C_ADT.cell_adr_table[nADT].last_sector;
                 if (iIniSec < MenuInfo.m_AADT_Cell_list[kk].iIniSec) MenuInfo.m_AADT_Cell_list[kk].iIniSec = iIniSec;
                 if (iEndSec > MenuInfo.m_AADT_Cell_list[kk].iEndSec) MenuInfo.m_AADT_Cell_list[kk].iEndSec = iEndSec;
                 iSize = (iEndSec - iIniSec + 1);
                 MenuInfo.m_AADT_Cell_list[kk].iSize += (iEndSec - iIniSec + 1);
             }
 
-            FillDurations();
+            FillDurations(ifo);
 
             //////////////////////////////////////////////////////////////	
             /////////////   VIDs
@@ -510,13 +460,14 @@ namespace PgcDemuxCS
             return ii;
         }
 
-        public virtual void FillDurations()
+        public virtual void FillDurations(ifo_handle_t ifo)
         {
             int iArraysize;
             int i, j, k;
             int VIDa, CIDa, VIDb, CIDb;
             bool bFound;
-            int iVideoAttr, iFormat;
+            video_attr_t iVideoAttr;
+            int iFormat;
 
 
             iArraysize = TitleInfo.m_AADT_Cell_list.GetSize();
@@ -529,23 +480,29 @@ namespace PgcDemuxCS
                 {
                     for (k = 0; k < TitleInfo.m_nCells[j]; k++)
                     {
-                        VIDa = Util.GetNbytes(2, m_pIFO.AtIndex(TitleInfo.m_C_POST[j] + k * 4));
-                        CIDa = m_pIFO[TitleInfo.m_C_POST[j] + k * 4 + 3];
+                        VIDa = TitleInfo.m_C_POST[j][k].vob_id_nr;
+                        CIDa = TitleInfo.m_C_POST[j][k].cell_nr;
                         if (VIDa == VIDb && CIDa == CIDb)
                         {
                             bFound = true;
-                            TitleInfo.m_AADT_Cell_list[i].dwDuration = (ulong)Util.GetNbytes(4, m_pIFO.AtIndex(TitleInfo.m_C_PBKT[j] + 0x18 * k + 4));
+                            TitleInfo.m_AADT_Cell_list[i].dwDuration = (ulong)TitleInfo.m_C_PBKT[j][k].playback_time.Raw;
                         }
                     }
                 }
                 if (!bFound)
                 {
-                    iVideoAttr = m_pIFO[0x200] * 256 + m_pIFO[0x201];
-                    iFormat = (iVideoAttr & 0x1000) >> 12;
-                    if (iFormat == 0) // NTSC
-                        TitleInfo.m_AADT_Cell_list[i].dwDuration = 0xC0;
-                    else // PAL
-                        TitleInfo.m_AADT_Cell_list[i].dwDuration = 0x40;
+                    if (ifo.vtsi_mat != null)
+                    {
+                        iVideoAttr = ifo.vtsi_mat.vts_video_attr;
+                        iFormat = iVideoAttr.video_format;
+                        if (iFormat == 0) // NTSC
+                            TitleInfo.m_AADT_Cell_list[i].dwDuration = 0xC0;
+                        else // PAL
+                            TitleInfo.m_AADT_Cell_list[i].dwDuration = 0x40;
+                    } else
+                    {
+                        TitleInfo.m_AADT_Cell_list[i].dwDuration = 0xC0; // Default to NTSC
+                    }
                 }
             }
 
@@ -559,19 +516,19 @@ namespace PgcDemuxCS
                 {
                     for (k = 0; k < MenuInfo.m_nCells[j]; k++)
                     {
-                        VIDa = Util.GetNbytes(2, m_pIFO.AtIndex(MenuInfo.m_C_POST[j] + k * 4));
-                        CIDa = m_pIFO[MenuInfo.m_C_POST[j] + k * 4 + 3];
+                        VIDa = MenuInfo.m_C_POST[j][k].vob_id_nr;
+                        CIDa = MenuInfo.m_C_POST[j][k].cell_nr;
                         if (VIDa == VIDb && CIDa == CIDb)
                         {
                             bFound = true;
-                            MenuInfo.m_AADT_Cell_list[i].dwDuration = (ulong)Util.GetNbytes(4, m_pIFO.AtIndex(MenuInfo.m_C_PBKT[j] + 0x18 * k + 4));
+                            MenuInfo.m_AADT_Cell_list[i].dwDuration = (ulong)MenuInfo.m_C_PBKT[j][k].playback_time.Raw;
                         }
                     }
                 }
                 if (!bFound)
                 {
-                    iVideoAttr = m_pIFO[0x100] * 256 + m_pIFO[0x101];
-                    iFormat = (iVideoAttr & 0x1000) >> 12;
+                    iVideoAttr = (ifo.vmgi_mat != null) ? ifo.vmgi_mat.vmgm_video_attr : ifo.vtsi_mat.vtsm_video_attr;
+                    iFormat = iVideoAttr.video_format;
                     if (iFormat == 0) // NTSC
                         MenuInfo.m_AADT_Cell_list[i].dwDuration = 0xC0;
                     else // PAL
