@@ -35,10 +35,9 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
                 int dup;
                 if ((dup = find_dup_lut(lu[i].lang_start_byte, i)) >= 0) {
                     lu[i].pgcit = lu[dup].pgcit;
-                    lu[i].pgcit.ref_count++;
                     continue;
                 }
-                lu[i].pgcit = new pgcit_t(file, offset + lu[i].lang_start_byte);
+                lu[i].pgcit = new ProgamChainInformationTable(file, offset + lu[i].lang_start_byte, true);
                 /* FIXME: Iterate and verify that all menus that should exists accordingly
                  * to pgci_ut->lu[i].exists really do? */
             }

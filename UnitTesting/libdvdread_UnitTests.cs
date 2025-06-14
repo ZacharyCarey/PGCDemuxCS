@@ -56,11 +56,11 @@ namespace UnitTesting
             FindTrack(expected, vmg, ifo, out vts_ifo, out title);
 
             // Verify data
-            pgcit_t vts_pgcit = vts_ifo.TitleProgramChainTable;
+            ProgamChainInformationTable vts_pgcit = vts_ifo.TitleProgramChainTable;
             var video_attr = vts_ifo.TitlesVobVideoAttributes;
             var vts_id = vts_ifo.ID;
             
-            var pgc = vts_pgcit.pgci_srp[vts_ifo.TitlesAndChapters.titles[title.vts_ttn - 1].ptt[0].pgcn - 1].pgc;
+            var pgc = vts_pgcit[vts_ifo.TitlesAndChapters[title.vts_ttn - 1][0].ProgramChainNumber - 1].pgc;
 
             var chapter_count_reported = title.nr_of_ptts;
             if (pgc.cell_playback == null || pgc.program_map == null)

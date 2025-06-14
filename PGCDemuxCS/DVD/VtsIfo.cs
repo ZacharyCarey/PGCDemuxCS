@@ -11,18 +11,18 @@ namespace PgcDemuxCS.DVD
     public class VtsIfo : IfoBase
     {
 
-        public readonly uint Category; // vts_category
-        public readonly uint TitleVobStartSector; // vtstt_vobs
-        public readonly vts_ptt_srpt_t? TitlesAndChapters = null; // vts_ptt_srpt
-        public readonly pgcit_t? TitleProgramChainTable = null; // vts_pgcit
-        public override pgci_ut_t? MenuProgramChainTable { get; } = null; // pgci_ut
-        public readonly vts_tmapt_t? TimeMap = null; // vts_tmapt
-        public readonly c_adt_t? TitleCellAddressTable = null; // vts_c_adt
-        public readonly vobu_admap_t? TitleVobuAddressMap = null; // vts_vobu_admap
-        public readonly video_attr_t TitlesVobVideoAttributes; // vts_video_attr
-        public readonly audio_attr_t[] TitlesVobAudioAttributes; // vts_audio_attr
-        public readonly subp_attr_t[] TitlesVobSubpictureAttributes; // vts_subp_attr
-        public readonly multichannel_ext_t[] MultichannelExtensions = new multichannel_ext_t[8]; // vts_mu_audio_attr
+        public readonly uint Category;
+        public readonly uint TitleVobStartSector;
+        public readonly PartOfTitleSearchPointerTable? TitlesAndChapters = null;
+        public readonly ProgamChainInformationTable? TitleProgramChainTable = null;
+        public override pgci_ut_t? MenuProgramChainTable { get; } = null; 
+        public readonly vts_tmapt_t? TimeMap = null; 
+        public readonly CellAddressTable? TitleCellAddressTable = null;
+        public readonly vobu_admap_t? TitleVobuAddressMap = null; 
+        public readonly video_attr_t TitlesVobVideoAttributes; 
+        public readonly audio_attr_t[] TitlesVobAudioAttributes; 
+        public readonly subp_attr_t[] TitlesVobSubpictureAttributes; 
+        public readonly multichannel_ext_t[] MultichannelExtensions = new multichannel_ext_t[8];
 
         private VtsIfo(Stream file) : base(file)
         {
@@ -43,12 +43,12 @@ namespace PgcDemuxCS.DVD
 
             uint titlesSector = file.Read<uint>();
             DvdUtils.CHECK_VALUE(titlesSector <= LastIFOSector);
-            if (titlesSector != 0) TitlesAndChapters = new vts_ptt_srpt_t(file, titlesSector * DvdUtils.DVD_BLOCK_LEN);
+            if (titlesSector != 0) TitlesAndChapters = new PartOfTitleSearchPointerTable(file, titlesSector * DvdUtils.DVD_BLOCK_LEN);
 
             file.Seek(0xCC, SeekOrigin.Begin);
             uint titlePgcSector = file.Read<uint>();
             DvdUtils.CHECK_VALUE(titlePgcSector <= LastIFOSector);
-            if (titlePgcSector != 0) TitleProgramChainTable = new pgcit_t(file, titlePgcSector * DvdUtils.DVD_BLOCK_LEN);
+            if (titlePgcSector != 0) TitleProgramChainTable = new ProgamChainInformationTable(file, titlePgcSector * DvdUtils.DVD_BLOCK_LEN, false);
 
             file.Seek(0xD0, SeekOrigin.Begin);
             uint menuPgcSector = file.Read<uint>();
@@ -63,7 +63,7 @@ namespace PgcDemuxCS.DVD
             file.Seek(0xE0, SeekOrigin.Begin);
             uint cellAddrSector = file.Read<uint>();
             DvdUtils.CHECK_VALUE(cellAddrSector <= LastIFOSector);
-            if (cellAddrSector != 0) TitleCellAddressTable = new c_adt_t(file, cellAddrSector *  DvdUtils.DVD_BLOCK_LEN);
+            if (cellAddrSector != 0) TitleCellAddressTable = new CellAddressTable(file, cellAddrSector *  DvdUtils.DVD_BLOCK_LEN);
 
             file.Seek(0xE4, SeekOrigin.Begin);
             uint vobuSector = file.Read<uint>();

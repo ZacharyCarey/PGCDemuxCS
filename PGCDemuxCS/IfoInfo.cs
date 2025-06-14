@@ -44,16 +44,16 @@ namespace PgcDemuxCS
         /// </summary>
         public bool m_bVMGM;
 
-        public c_adt_t? m_iVTS_C_ADT;
+        public CellAddressTable? m_iVTS_C_ADT;
         public pgci_ut_t m_iVTSM_PGCI;
-        public c_adt_t m_iVTSM_C_ADT;
+        public CellAddressTable m_iVTSM_C_ADT;
 
         public readonly int[] m_nAngles = new int[MAX_PGC];
 
         public readonly ulong[] m_dwDuration = new ulong[MAX_PGC];
         public readonly ulong[] m_dwMDuration = new ulong[MAX_MPGC];
 
-        public readonly pgcit_t[] m_iVTSM_LU = new pgcit_t[MAX_LU];
+        public readonly ProgamChainInformationTable[] m_iVTSM_LU = new ProgamChainInformationTable[MAX_LU];
         public readonly int[] m_nIniPGCinLU = new int[MAX_LU];
         public readonly int[] m_nPGCinLU = new int[MAX_LU];
         public readonly pgc_t[] m_iMENU_PGC = new pgc_t[MAX_MPGC];
@@ -129,7 +129,7 @@ namespace PgcDemuxCS
                 m_iVTSM_PGCI = ifo.MenuProgramChainTable;
                 m_iVTSM_C_ADT = ifo.MenuCellAddressTable;
                 m_iVTS_C_ADT = vts.TitleCellAddressTable;
-                TitleInfo.m_nPGCs = vts.TitleProgramChainTable.nr_of_pgci_srp;
+                TitleInfo.m_nPGCs = vts.TitleProgramChainTable.Count;
 
                 // Title PGCs	
                 if (TitleInfo.m_nPGCs > MAX_PGC)
@@ -140,20 +140,20 @@ namespace PgcDemuxCS
                 }
                 for (k = 0; k < TitleInfo.m_nPGCs; k++)
                 {
-                    var pgc = vts.TitleProgramChainTable.pgci_srp[k].pgc;
+                    var pgc = vts.TitleProgramChainTable[k].pgc;
                     m_dwDuration[k] = pgc.playback_time.Raw;
 
                     TitleInfo.m_C_PBKT[k] = (pgc.cell_playback_offset == 0) ? null : pgc.cell_playback;
                     TitleInfo.m_C_POST[k] = (pgc.cell_position_offset == 0) ? null : pgc.cell_position;
 
-                    TitleInfo.m_nCells[k] = vts.TitleProgramChainTable.pgci_srp[k].pgc.nr_of_cells;
+                    TitleInfo.m_nCells[k] = vts.TitleProgramChainTable[k].pgc.nr_of_cells;
 
 
                     m_nAngles[k] = 1;
 
                     for (nCell = 0, bEndAngle = false; nCell < TitleInfo.m_nCells[k] && bEndAngle == false; nCell++)
                     {
-                        iCat = vts.TitleProgramChainTable.pgci_srp[k].pgc.cell_playback[nCell].iCat;
+                        iCat = vts.TitleProgramChainTable[k].pgc.cell_playback[nCell].iCat;
                         iCat = iCat & 0xF0;
                         //			0101=First; 1001=Middle ;	1101=Last
                         if (iCat == 0x50)
@@ -189,7 +189,7 @@ namespace PgcDemuxCS
             for (nLU = 0; nLU < m_nLUs; nLU++)
             {
                 m_iVTSM_LU[nLU] = m_iVTSM_PGCI.lu[nLU].pgcit;
-                m_nPGCinLU[nLU] = m_iVTSM_LU[nLU].nr_of_pgci_srp;
+                m_nPGCinLU[nLU] = m_iVTSM_LU[nLU].Count;
                 m_nIniPGCinLU[nLU] = MenuInfo.m_nPGCs;
 
                 for (j = 0; j < m_nPGCinLU[nLU]; j++)
@@ -202,7 +202,7 @@ namespace PgcDemuxCS
                     }
                     nAbsPGC = j + MenuInfo.m_nPGCs;
                     m_nLU_MPGC[nAbsPGC] = nLU;
-                    m_iMENU_PGC[nAbsPGC] = m_iVTSM_LU[nLU].pgci_srp[j].pgc;
+                    m_iMENU_PGC[nAbsPGC] = m_iVTSM_LU[nLU][j].pgc;
 
                     MenuInfo.m_C_PBKT[nAbsPGC] = (m_iMENU_PGC[nAbsPGC].cell_playback_offset == 0) ? null : m_iMENU_PGC[nAbsPGC].cell_playback;
                     MenuInfo.m_C_POST[nAbsPGC] = (m_iMENU_PGC[nAbsPGC].cell_position_offset == 0) ? null : m_iMENU_PGC[nAbsPGC].cell_position;
@@ -228,14 +228,14 @@ namespace PgcDemuxCS
             if (m_iVTS_C_ADT == null) nTotADT = 0;
             else
             {
-                nTotADT = m_iVTS_C_ADT.nr_of_vobs;
+                nTotADT = m_iVTS_C_ADT.Count;
             }
 
             //Cells
             for (nADT = 0; nADT < nTotADT; nADT++)
             {
-                VidADT = m_iVTS_C_ADT.cell_adr_table[nADT].vob_id;
-                CidADT = m_iVTS_C_ADT.cell_adr_table[nADT].cell_id;
+                VidADT = m_iVTS_C_ADT[nADT].VobID;
+                CidADT = m_iVTS_C_ADT[nADT].CellID;
 
                 iArraysize = TitleInfo.m_AADT_Cell_list.GetSize();
                 for (k = 0, bAlready = false; k < iArraysize; k++)
@@ -259,8 +259,8 @@ namespace PgcDemuxCS
                     //			m_AADT_Cell_list.SetAtGrow(iArraysize,myADT_Cell);
                     //			kk=iArraysize;
                 }
-                iIniSec = (int)m_iVTS_C_ADT.cell_adr_table[nADT].start_sector;
-                iEndSec = (int)m_iVTS_C_ADT.cell_adr_table[nADT].last_sector;
+                iIniSec = (int)m_iVTS_C_ADT[nADT].StartSector;
+                iEndSec = (int)m_iVTS_C_ADT[nADT].LastSector;
                 if (iIniSec < TitleInfo.m_AADT_Cell_list[kk].iIniSec) TitleInfo.m_AADT_Cell_list[kk].iIniSec = iIniSec;
                 if (iEndSec > TitleInfo.m_AADT_Cell_list[kk].iEndSec) TitleInfo.m_AADT_Cell_list[kk].iEndSec = iEndSec;
                 iSize = (iEndSec - iIniSec + 1);
@@ -271,14 +271,14 @@ namespace PgcDemuxCS
             if (m_iVTSM_C_ADT == null) nTotADT = 0;
             else
             {
-                nTotADT = m_iVTSM_C_ADT.nr_of_vobs;
+                nTotADT = m_iVTSM_C_ADT.Count;
             }
 
             // Cells
             for (nADT = 0; nADT < nTotADT; nADT++)
             {
-                VidADT = m_iVTSM_C_ADT.cell_adr_table[nADT].vob_id;
-                CidADT = m_iVTSM_C_ADT.cell_adr_table[nADT].cell_id;
+                VidADT = m_iVTSM_C_ADT[nADT].VobID;
+                CidADT = m_iVTSM_C_ADT[nADT].CellID;
 
                 iArraysize = MenuInfo.m_AADT_Cell_list.GetSize();
                 for (k = 0, bAlready = false; k < iArraysize; k++)
@@ -302,8 +302,8 @@ namespace PgcDemuxCS
                     //			m_MADT_Cell_list.SetAtGrow(iArraysize,myADT_Cell);
                     //			kk=iArraysize;
                 }
-                iIniSec = (int)m_iVTSM_C_ADT.cell_adr_table[nADT].start_sector;
-                iEndSec = (int)m_iVTSM_C_ADT.cell_adr_table[nADT].last_sector;
+                iIniSec = (int)m_iVTSM_C_ADT[nADT].StartSector;
+                iEndSec = (int)m_iVTSM_C_ADT[nADT].LastSector;
                 if (iIniSec < MenuInfo.m_AADT_Cell_list[kk].iIniSec) MenuInfo.m_AADT_Cell_list[kk].iIniSec = iIniSec;
                 if (iEndSec > MenuInfo.m_AADT_Cell_list[kk].iEndSec) MenuInfo.m_AADT_Cell_list[kk].iEndSec = iEndSec;
                 iSize = (iEndSec - iIniSec + 1);

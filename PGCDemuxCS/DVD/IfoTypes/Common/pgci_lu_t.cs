@@ -15,7 +15,7 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
         public byte lang_extension;
         public byte exists;
         public uint lang_start_byte;
-        public pgcit_t pgcit; // Gets set by pgci_ut_t
+        public ProgamChainInformationTable pgcit; // Gets set by pgci_ut_t
 
         private pgci_lu_t(Stream file)
         {
@@ -37,7 +37,7 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
             DvdUtils.CHECK_VALUE((exists & 0x07) == 0);
         }
 
-        public static pgci_lu_t? Read(Stream file)
+        static pgci_lu_t? IStreamReadable<pgci_lu_t>.Read(Stream file)
         {
             try
             {

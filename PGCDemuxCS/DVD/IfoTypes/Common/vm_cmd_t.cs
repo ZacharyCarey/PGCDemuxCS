@@ -15,7 +15,7 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
             file.Read(this.bytes);
         }
 
-        public static vm_cmd_t? Read(Stream file)
+        static vm_cmd_t? IStreamReadable<vm_cmd_t>.Read(Stream file)
         {
             try
             {

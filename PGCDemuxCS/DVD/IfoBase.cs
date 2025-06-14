@@ -15,42 +15,42 @@ namespace PgcDemuxCS.DVD
         /// <summary>
         /// The ifo identifier. 12 bytes long, can only be "DVDVIDEO-VMG" or "DVDVIDEO-VTS"
         /// </summary>
-        public readonly string ID; // vmg_identifier
+        public readonly string ID;
 
         /// <summary>
         /// The final sector of the BUP file.
         /// Similar to the VOB files, the BUP file is treated as an extension of the main IFO file, not as two separate files.
         /// See <see cref="http://www.mpucoder.com/DVD/ifo.html#c_adt"/> for more info.
         /// </summary>
-        internal readonly uint LastBUPSector; // vmg_last_sector
+        internal readonly uint LastBUPSector;
 
         /// <summary>
         /// The final sector of this IFO file.
         /// </summary>
-        internal readonly uint LastIFOSector; // vmgi_last_sector
+        internal readonly uint LastIFOSector;
 
         /// <summary>
         /// Unclear if this is a disc/movie version, or the DVD format version.
         /// </summary>
-        public readonly Version Version; // specification_version
+        public readonly Version Version;
 
         /// <summary>
         /// The last byte of the VMGI_MAT/VTS_MAT data structure
         /// </summary>
-        internal readonly uint LastByteIndex; // vmgi_last_byte
+        internal readonly uint LastByteIndex;
 
         /// <summary>
         /// The sector where the Menu VOB data starts
         /// <seealso cref="DvdUtils.DVD_BLOCK_LEN"/>
         /// </summary>
-        public readonly uint MenuVobStartSector; // vmgm_vobs
-        public readonly c_adt_t? MenuCellAddressTable = null; // menu_c_adt
-        public readonly vobu_admap_t? MenuVobuAddressMap = null; // menu_vobu_admap
-        public readonly video_attr_t MenuVobVideoAttributes; // vmgm_video_attr
-        public readonly audio_attr_t? MenuVobAudioAttributes = null; // vmgm_audio_attr
-        public readonly subp_attr_t? MenuSubpictureAttributes = null; // vmgm_subp_attr
+        public readonly uint MenuVobStartSector;
+        public readonly CellAddressTable? MenuCellAddressTable = null;
+        public readonly vobu_admap_t? MenuVobuAddressMap = null;
+        public readonly video_attr_t MenuVobVideoAttributes;
+        public readonly audio_attr_t? MenuVobAudioAttributes = null;
+        public readonly subp_attr_t? MenuSubpictureAttributes = null;
 
-        public abstract pgci_ut_t? MenuProgramChainTable { get; } // pgci_ut
+        public abstract pgci_ut_t? MenuProgramChainTable { get; }
 
         protected IfoBase(Stream file)
         {
@@ -87,7 +87,7 @@ namespace PgcDemuxCS.DVD
             file.Seek(0xD8, SeekOrigin.Begin);
             uint menuADTSector = file.Read<uint>();
             DvdUtils.CHECK_VALUE(menuADTSector <= LastIFOSector);
-            if (menuADTSector != 0) MenuCellAddressTable = new c_adt_t(file, menuADTSector * DvdUtils.DVD_BLOCK_LEN);
+            if (menuADTSector != 0) MenuCellAddressTable = new CellAddressTable(file, menuADTSector * DvdUtils.DVD_BLOCK_LEN);
 
             file.Seek(0xDC, SeekOrigin.Begin);
             uint vobuAddressMapSector = file.Read<uint>();

@@ -14,35 +14,35 @@ namespace PgcDemuxCS.DVD
         /// <summary>
         /// Byte 2 of 'VMG Category' (00xx0000) is the Region Code
         /// </summary>
-        public readonly uint Category; // vmg_category
+        public readonly uint Category;
 
-        public readonly ushort NumberOfVolumes; // vmg_nr_of_volumes
-        public readonly ushort VolumeNumber; // vmg_this_volume_nr
+        public readonly ushort NumberOfVolumes; 
+        public readonly ushort VolumeNumber;
 
         /// <summary>
         /// Which side of the disc is being read. Can only be 1 or 2.
         /// </summary>
-        public readonly byte DiscSide; // disc_side
-        public readonly ushort NumberOfTitleSets; // vmg_nr_of_title_sets
+        public readonly byte DiscSide;
+        public readonly ushort NumberOfTitleSets;
 
         /// <summary>
         /// Usually the studio that distributed the movie.
         /// For example, "WARNER_HOME_VIDEO"
         /// Maximum 32 bytes.
         /// </summary>
-        public readonly string ProviderID; // provider_identification
+        public readonly string ProviderID; 
 
         /// <summary>
         /// Unsure what this is used for.
         /// </summary>
-        public readonly ulong VmgPosCode; // vmg_pos_code
+        public readonly ulong VmgPosCode;
 
-        public readonly pgc_t? FirstPlayPGC = null; // first_play_pgc
-        public readonly tt_srpt_t? Titles = null; // tt_srpt
-        public override pgci_ut_t? MenuProgramChainTable { get; } = null; // pgci_ut
-        public readonly ptl_mait_t? ParentalManagementMasks = null; // ptl_mait
-        public readonly vts_atrt_t? VtsStreamAttributes = null; // vts_atrt
-        public readonly txtdt_mgi_t? TextData = null; // txtdt_mgi
+        public readonly pgc_t? FirstPlayPGC = null;
+        public readonly tt_srpt_t? Titles = null; 
+        public override pgci_ut_t? MenuProgramChainTable { get; } = null;
+        public readonly ptl_mait_t? ParentalManagementMasks = null;
+        public readonly vts_atrt_t? VtsStreamAttributes = null;
+        public readonly txtdt_mgi_t? TextData = null;
 
         private VmgIfo(Stream file) : base(file)
         {

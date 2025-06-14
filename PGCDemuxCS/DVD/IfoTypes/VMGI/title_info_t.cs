@@ -41,7 +41,7 @@ namespace PgcDemuxCS.DVD.IfoTypes.VMGI
             // CHECK_VALUE(tt_srpt->title[i].title_set_sector != 0); 
         }
 
-        public static title_info_t? Read(Stream file)
+        static title_info_t? IStreamReadable<title_info_t>.Read(Stream file)
         {
             try
             {

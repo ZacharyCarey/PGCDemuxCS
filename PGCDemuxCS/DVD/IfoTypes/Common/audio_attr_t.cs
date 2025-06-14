@@ -84,7 +84,7 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
             }
         }
 
-        public static audio_attr_t? Read(Stream file)
+        static audio_attr_t? IStreamReadable<audio_attr_t>.Read(Stream file)
         {
             try
             {
