@@ -13,18 +13,14 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
         public uint last_byte;
         public cell_adr_t[] cell_adr_table; // No explicit size given
 
-        private c_adt_t(Stream file, uint sector)
+        internal c_adt_t(Stream file, uint offset)
         {
-            file.Seek(sector * DvdUtils.DVD_BLOCK_LEN, SeekOrigin.Begin);
+            file.Seek(offset, SeekOrigin.Begin);
 
             // Read data
             nr_of_vobs = file.Read<ushort>();
             zero_1 = file.Read<ushort>();
             last_byte = file.Read<uint>();
-
-            // Fix endiness
-            DvdUtils.B2N_16(ref nr_of_vobs);
-            DvdUtils.B2N_32(ref last_byte);
 
             // Verify
             if (last_byte + 1 < c_adt_t.Size)
@@ -52,26 +48,6 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
             foreach (var cell in cell_adr_table)
             {
                 DvdUtils.CHECK_VALUE(cell.vob_id <= nr_of_vobs);
-            }
-        }
-
-        internal static bool ifoRead_C_ADT(Stream file, uint sector, out c_adt_t? result)
-        {
-            if (sector == 0)
-            {
-                result = null;
-                return false;
-            }
-
-            try
-            {
-                result = new c_adt_t(file, sector);
-                return true;
-            }
-            catch (Exception)
-            {
-                result = null;
-                return false;
             }
         }
     }

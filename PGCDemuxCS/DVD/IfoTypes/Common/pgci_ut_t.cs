@@ -11,7 +11,7 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
         public uint last_byte;
         public pgci_lu_t[] lu = Array.Empty<pgci_lu_t>();
 
-        private pgci_ut_t(Stream file, uint offset)
+        internal pgci_ut_t(Stream file, uint offset)
         {
             file.Seek(offset, SeekOrigin.Begin);
 
@@ -19,10 +19,6 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
             nr_of_lus = file.Read<ushort>();
             zero_1 = file.Read<ushort>();
             last_byte = file.Read<uint>();
-
-            // fix endiness
-            DvdUtils.B2N_16(ref nr_of_lus);
-            DvdUtils.B2N_32(ref last_byte);
 
             // verify
             DvdUtils.CHECK_ZERO(zero_1);
@@ -57,37 +53,6 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
                 }
             }
             return -1;
-        }
-
-        internal static bool ifoRead_PGCI_UT(ifo_handle_t ifo, Stream file, out pgci_ut_t? result)
-        {
-            uint sector;
-
-            result = null;
-            if (ifo.vmgi_mat != null)
-            {
-                if (ifo.vmgi_mat.vmgm_pgci_ut == 0) return true;
-                else sector = ifo.vmgi_mat.vmgm_pgci_ut;
-            }
-            else if (ifo.vtsi_mat != null)
-            {
-                if (ifo.vtsi_mat.vtsm_pgci_ut == 0) return true;
-                else sector = ifo.vtsi_mat.vtsm_pgci_ut;
-            }
-            else
-            {
-                return false;
-            }
-
-            try
-            {
-                result = new pgci_ut_t(file, sector * DvdUtils.DVD_BLOCK_LEN);
-                return true;
-            }
-            catch (Exception)
-            {
-                return false;
-            }
         }
     }
 }

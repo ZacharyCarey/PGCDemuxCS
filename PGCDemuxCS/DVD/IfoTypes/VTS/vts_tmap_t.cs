@@ -27,7 +27,6 @@ namespace PgcDemuxCS.DVD.IfoTypes.VTS
             zero_1 = file.Read<byte>();
             nr_of_entries = file.Read<ushort>();
 
-            DvdUtils.B2N_16(ref nr_of_entries);
             DvdUtils.CHECK_ZERO(zero_1);
 
             if (nr_of_entries == 0)
@@ -38,11 +37,6 @@ namespace PgcDemuxCS.DVD.IfoTypes.VTS
 
             map_ent = new uint[nr_of_entries];
             file.Read(map_ent);
-
-            for (int i = 0; i < nr_of_entries; i++)
-            {
-                DvdUtils.B2N_32(ref map_ent[i]);
-            }
         }
     }
 }

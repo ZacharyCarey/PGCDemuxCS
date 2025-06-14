@@ -29,12 +29,6 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
             nr_of_cell = file.Read<ushort>();
             last_byte = file.Read<ushort>();
 
-            // Fix endiness
-            DvdUtils.B2N_16(ref nr_of_pre);
-            DvdUtils.B2N_16(ref nr_of_post);
-            DvdUtils.B2N_16(ref nr_of_cell);
-            DvdUtils.B2N_16(ref last_byte);
-
             DvdUtils.CHECK_VALUE(nr_of_pre + nr_of_post + nr_of_cell <= 255);
             DvdUtils.CHECK_VALUE((nr_of_pre + nr_of_post + nr_of_cell) * COMMAND_DATA_SIZE + PGC_COMMAND_TBL_SIZE <= last_byte + 1);
 

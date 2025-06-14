@@ -11,15 +11,12 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
         public uint last_byte;
         public uint[] vobu_start_sectors;
 
-        private vobu_admap_t(Stream file, uint sector)
+        internal vobu_admap_t(Stream file, uint offset)
         {
-            file.Seek(sector * DvdUtils.DVD_BLOCK_LEN, SeekOrigin.Begin);
+            file.Seek(offset, SeekOrigin.Begin);
 
             // Read data
             last_byte = file.Read<uint>();
-
-            // Fix endiness
-            DvdUtils.B2N_32(ref last_byte);
 
             uint info_length = last_byte + 1 - vobu_admap_t.Size;
             /* assert(info_length > 0);
@@ -29,24 +26,6 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
 
             vobu_start_sectors = new uint[info_length / sizeof(uint)];
             file.Read<uint>(vobu_start_sectors);
-
-            // Fix endiness
-            for (int i = 0; i < vobu_start_sectors.Length; i++)
-                DvdUtils.B2N_32(ref vobu_start_sectors[i]);
-        }
-
-        internal static bool ifoRead_VOBU_ADMAP(Stream file, uint sector, out vobu_admap_t? result)
-        {
-            try
-            {
-                result = new vobu_admap_t(file, sector);
-                return true;
-            }
-            catch (Exception)
-            {
-                result = null;
-                return false;
-            }
         }
     }
 }

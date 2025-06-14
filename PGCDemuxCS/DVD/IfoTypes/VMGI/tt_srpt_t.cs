@@ -13,7 +13,7 @@ namespace PgcDemuxCS.DVD.IfoTypes.VMGI
         public uint last_byte;
         public title_info_t[] title;
 
-        private tt_srpt_t(Stream file, uint offset)
+        internal tt_srpt_t(Stream file, uint offset)
         {
             file.Seek(offset, SeekOrigin.Begin);
 
@@ -21,10 +21,6 @@ namespace PgcDemuxCS.DVD.IfoTypes.VMGI
             nr_of_srpts = file.Read<ushort>();
             zero_1 = file.Read<ushort>();
             last_byte = file.Read<uint>();
-
-            // Fix endiness
-            DvdUtils.B2N_16(ref nr_of_srpts);
-            DvdUtils.B2N_32(ref last_byte);
 
             /* E-One releases don't fill this field */
             if (last_byte == 0)
@@ -49,20 +45,6 @@ namespace PgcDemuxCS.DVD.IfoTypes.VMGI
             DvdUtils.CHECK_VALUE(nr_of_srpts != 0);
             DvdUtils.CHECK_VALUE(nr_of_srpts < 100); /* ?? */
             DvdUtils.CHECK_VALUE(nr_of_srpts * title_info_t.Size <= info_length);
-        }
-
-        internal static bool ifoRead_TT_SRPT(ifo_handle_t ifofile, Stream file, out tt_srpt_t result)
-        {
-            try
-            {
-                result = new tt_srpt_t(file, ifofile.vmgi_mat.tt_srpt * DvdUtils.DVD_BLOCK_LEN);
-                return true;
-            }
-            catch (Exception)
-            {
-                result = null;
-                return false;
-            }
         }
     }
 }

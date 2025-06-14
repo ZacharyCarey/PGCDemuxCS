@@ -60,22 +60,6 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
             cell_playback_offset = file.Read<ushort>();
             cell_position_offset = file.Read<ushort>();
 
-            // Adjust endian
-            DvdUtils.B2N_16(ref next_pgc_nr);
-            DvdUtils.B2N_16(ref prev_pgc_nr);
-            DvdUtils.B2N_16(ref goup_pgc_nr);
-            DvdUtils.B2N_16(ref command_tbl_offset);
-            DvdUtils.B2N_16(ref program_map_offset);
-            DvdUtils.B2N_16(ref cell_playback_offset);
-            DvdUtils.B2N_16(ref cell_position_offset);
-
-            for (int i = 0; i < 8; i++)
-                DvdUtils.B2N_16(ref audio_control[i]);
-            for (int i = 0; i < 32; i++)
-                DvdUtils.B2N_32(ref subp_control[i]);
-            for (int i = 0; i < 16; i++)
-                DvdUtils.B2N_32(ref palette[i]);
-
             DvdUtils.CHECK_ZERO(zero_1);
             DvdUtils.CHECK_VALUE(nr_of_programs <= nr_of_cells);
 
@@ -125,27 +109,6 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
             {
                 cell_position = new cell_position_t[nr_of_cells];
                 cell_position_t.ifoRead_CELL_POSITION_TBL(file, cell_position, offset + cell_position_offset);
-            }
-        }
-
-        internal static bool ifoRead_FP_PGC(ifo_handle_t ifofile, Stream file, out pgc_t? result)
-        {
-            // It seems that first_play_pgc is optional after all
-            result = null;
-            if (ifofile.vmgi_mat.first_play_pgc == 0)
-            {
-                return true;
-            }
-
-            try
-            {
-                result = new pgc_t(file, ifofile.vmgi_mat.first_play_pgc);
-                result.ref_count = 1;
-                return true;
-            }
-            catch (Exception)
-            {
-                return false;
             }
         }
     }

@@ -28,10 +28,6 @@ namespace PgcDemuxCS.DVD.IfoTypes.VMGI
             vts_ttn = file.Read<byte>();
             title_set_sector = file.Read<uint>();
 
-            DvdUtils.B2N_16(ref nr_of_ptts);
-            DvdUtils.B2N_16(ref parental_id);
-            DvdUtils.B2N_32(ref title_set_sector);
-
             DvdUtils.CHECK_VALUE(pb_ty.zero_1 == false);
             DvdUtils.CHECK_VALUE(nr_of_angles != 0);
             DvdUtils.CHECK_VALUE(nr_of_angles < 10);

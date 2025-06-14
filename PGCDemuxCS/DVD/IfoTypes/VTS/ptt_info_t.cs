@@ -16,9 +16,6 @@ namespace PgcDemuxCS.DVD.IfoTypes.VTS
             pgcn = file.Read<ushort>();
             pgn = file.Read<ushort>();
 
-            DvdUtils.B2N_16(ref pgcn);
-            DvdUtils.B2N_16(ref pgn);
-
             // ??
             DvdUtils.CHECK_VALUE(pgcn != 0);
             DvdUtils.CHECK_VALUE(pgcn < 1000); /* ?? */

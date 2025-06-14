@@ -24,11 +24,6 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
             start_sector = file.Read<uint>();
             last_sector = file.Read<uint>();
 
-            // Fix endiness
-            DvdUtils.B2N_16(ref vob_id);
-            DvdUtils.B2N_32(ref start_sector);
-            DvdUtils.B2N_32(ref last_sector);
-
             // Verify
             DvdUtils.CHECK_ZERO(zero_1);
             DvdUtils.CHECK_VALUE(vob_id > 0);

@@ -28,10 +28,6 @@ namespace PgcDemuxCS.DVD.IfoTypes.VMGI
             pf_ptl_mai_start_byte = file.Read<ushort>();
             zero_2 = file.Read<ushort>();
 
-            // Fix endiness
-            DvdUtils.B2N_16(ref country_code);
-            DvdUtils.B2N_16(ref pf_ptl_mai_start_byte);
-
             // Verify
             DvdUtils.CHECK_ZERO(zero_1);
             DvdUtils.CHECK_ZERO(zero_2);

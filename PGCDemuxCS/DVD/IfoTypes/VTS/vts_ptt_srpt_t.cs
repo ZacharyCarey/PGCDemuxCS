@@ -19,18 +19,14 @@ namespace PgcDemuxCS.DVD.IfoTypes.VTS
         /// </summary>
         public uint[] ttu_offset;
 
-        private vts_ptt_srpt_t(Stream file, uint sector)
+        internal vts_ptt_srpt_t(Stream file, uint offset)
         {
-            file.Seek(sector * DvdUtils.DVD_BLOCK_LEN, SeekOrigin.Begin);
+            file.Seek(offset, SeekOrigin.Begin);
 
             // Read data
             nr_of_srpts = file.Read<ushort>();
             zero_1 = file.Read<ushort>();
             last_byte = file.Read<uint>();
-
-            // Fix endiness
-            DvdUtils.B2N_16(ref nr_of_srpts);
-            DvdUtils.B2N_32(ref last_byte);
 
             // Verify
             DvdUtils.CHECK_ZERO(zero_1);
@@ -54,7 +50,6 @@ namespace PgcDemuxCS.DVD.IfoTypes.VTS
             for (int i = 0; i < nr_of_srpts; i++) {
 
                 /* Transformers 3 has PTT start bytes that point outside the SRPT PTT */
-                DvdUtils.B2N_32(ref ttu_offset[i]);
                 /* assert(data[i] + sizeof(ptt_info_t) <= vts_ptt_srpt->last_byte + 1);
                    Magic Knight Rayearth Daybreak is mastered very strange and has
                    Titles with 0 PTTs. They all have a data[i] offsets beyond the end of
@@ -82,21 +77,7 @@ namespace PgcDemuxCS.DVD.IfoTypes.VTS
                     /* The assert placed here because of Magic Knight Rayearth Daybreak */
                     DvdUtils.CHECK_VALUE(ttu_offset[i] + ptt_info_t.Size <= last_byte + 1);                
                 }
-                titles[i] = new vts_ptt_t(file, (sector * DvdUtils.DVD_BLOCK_LEN) + ttu_offset[i], n / 4);
-            }
-        }
-
-        internal static bool ifoRead_VTS_PTT_SRPT(Stream file, uint sector, out vts_ptt_srpt_t? result)
-        {
-            try
-            {
-                result = new vts_ptt_srpt_t(file, sector);
-                return true;
-            }
-            catch (Exception)
-            {
-                result = null;
-                return false; 
+                titles[i] = new vts_ptt_t(file, offset + ttu_offset[i], n / 4);
             }
         }
     }

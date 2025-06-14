@@ -45,7 +45,6 @@ namespace PgcDemuxCS
         public bool m_bVMGM;
 
         public c_adt_t? m_iVTS_C_ADT;
-        public int m_iVTS_VOBU_ADMAP, m_iVTS_TMAPTI;
         public pgci_ut_t m_iVTSM_PGCI;
         public c_adt_t m_iVTSM_C_ADT;
 
@@ -109,7 +108,7 @@ namespace PgcDemuxCS
                 VtsNumber = int.Parse(ifoName[4..6]);
             }
 
-            ifo_handle_t ifo = ifo_handle_t.Open(reader, Path.GetFileNameWithoutExtension(ifoName));
+            IfoBase ifo = IfoBase.Open(reader, Path.GetFileNameWithoutExtension(ifoName));
 
             TitleInfo.m_AADT_Cell_list.RemoveAll();
             MenuInfo.m_AADT_Cell_list.RemoveAll();
@@ -118,68 +117,66 @@ namespace PgcDemuxCS
 
 
             // Get Title Cells
-            if (m_bVMGM)
+            if (ifo is VmgIfo vmg)
             {
-                m_iVTSM_PGCI = ifo.pgci_ut;
-                m_iVTS_TMAPTI = 0;
-                m_iVTSM_C_ADT = ifo.menu_c_adt;
+                m_iVTSM_PGCI = ifo.MenuProgramChainTable;
+                m_iVTSM_C_ADT = ifo.MenuCellAddressTable;
                 m_iVTS_C_ADT = null;
-                m_iVTS_VOBU_ADMAP = 0;
+                TitleInfo.m_nPGCs = 0;
             }
-            else
+            else if (ifo is VtsIfo vts)
             {
-                m_iVTSM_PGCI = ifo.pgci_ut;
-                m_iVTS_TMAPTI = (int)(DvdUtils.DVD_BLOCK_LEN * ifo.vtsi_mat.vts_tmapt);
-                m_iVTSM_C_ADT = ifo.menu_c_adt;
-                m_iVTS_C_ADT = ifo.vts_c_adt;
-                m_iVTS_VOBU_ADMAP = (int)(DvdUtils.DVD_BLOCK_LEN * ifo.vtsi_mat.vts_vobu_admap);
-            }
+                m_iVTSM_PGCI = ifo.MenuProgramChainTable;
+                m_iVTSM_C_ADT = ifo.MenuCellAddressTable;
+                m_iVTS_C_ADT = vts.TitleCellAddressTable;
+                TitleInfo.m_nPGCs = vts.TitleProgramChainTable.nr_of_pgci_srp;
 
-            TitleInfo.m_nPGCs = m_bVMGM ? 0 : ifo.vts_pgcit.nr_of_pgci_srp;
-
-            // Title PGCs	
-            if (TitleInfo.m_nPGCs > MAX_PGC)
-            {
-                csAux = $"ERROR: Max PGCs limit ({MAX_PGC}) has been reached.";
-                Util.MyErrorBox(csAux);
-                throw new IOException(csAux);
-            }
-            for (k = 0; k < TitleInfo.m_nPGCs; k++)
-            {
-                var pgc = ifo.vts_pgcit.pgci_srp[k].pgc;
-                m_dwDuration[k] = pgc.playback_time.Raw;
-
-                TitleInfo.m_C_PBKT[k] = (pgc.cell_playback_offset == 0) ? null : pgc.cell_playback;
-                TitleInfo.m_C_POST[k] = (pgc.cell_position_offset == 0) ? null : pgc.cell_position;
-
-                TitleInfo.m_nCells[k] = ifo.vts_pgcit.pgci_srp[k].pgc.nr_of_cells;
-
-
-                m_nAngles[k] = 1;
-
-                for (nCell = 0, bEndAngle = false; nCell < TitleInfo.m_nCells[k] && bEndAngle == false; nCell++)
+                // Title PGCs	
+                if (TitleInfo.m_nPGCs > MAX_PGC)
                 {
-                    iCat = ifo.vts_pgcit.pgci_srp[k].pgc.cell_playback[nCell].iCat;
-                    iCat = iCat & 0xF0;
-                    //			0101=First; 1001=Middle ;	1101=Last
-                    if (iCat == 0x50)
-                        m_nAngles[k] = 1;
-                    else if (iCat == 0x90)
-                        m_nAngles[k]++;
-                    else if (iCat == 0xD0)
+                    csAux = $"ERROR: Max PGCs limit ({MAX_PGC}) has been reached.";
+                    Util.MyErrorBox(csAux);
+                    throw new IOException(csAux);
+                }
+                for (k = 0; k < TitleInfo.m_nPGCs; k++)
+                {
+                    var pgc = vts.TitleProgramChainTable.pgci_srp[k].pgc;
+                    m_dwDuration[k] = pgc.playback_time.Raw;
+
+                    TitleInfo.m_C_PBKT[k] = (pgc.cell_playback_offset == 0) ? null : pgc.cell_playback;
+                    TitleInfo.m_C_POST[k] = (pgc.cell_position_offset == 0) ? null : pgc.cell_position;
+
+                    TitleInfo.m_nCells[k] = vts.TitleProgramChainTable.pgci_srp[k].pgc.nr_of_cells;
+
+
+                    m_nAngles[k] = 1;
+
+                    for (nCell = 0, bEndAngle = false; nCell < TitleInfo.m_nCells[k] && bEndAngle == false; nCell++)
                     {
-                        m_nAngles[k]++;
-                        bEndAngle = true;
+                        iCat = vts.TitleProgramChainTable.pgci_srp[k].pgc.cell_playback[nCell].iCat;
+                        iCat = iCat & 0xF0;
+                        //			0101=First; 1001=Middle ;	1101=Last
+                        if (iCat == 0x50)
+                            m_nAngles[k] = 1;
+                        else if (iCat == 0x90)
+                            m_nAngles[k]++;
+                        else if (iCat == 0xD0)
+                        {
+                            m_nAngles[k]++;
+                            bEndAngle = true;
+                        }
                     }
                 }
+            } else
+            {
+                throw new InvalidCastException("Unknown IFO type.");
             }
-
 
             // Menu PGCs
             if (m_iVTSM_PGCI == null)
                 m_nLUs = 0;
             else
-                m_nLUs = ifo.pgci_ut.nr_of_lus;
+                m_nLUs = m_iVTSM_PGCI.nr_of_lus;
 
             MenuInfo.m_nPGCs = 0;
             if (m_nLUs > MAX_LU)
@@ -460,7 +457,7 @@ namespace PgcDemuxCS
             return ii;
         }
 
-        public virtual void FillDurations(ifo_handle_t ifo)
+        public virtual void FillDurations(IfoBase ifo)
         {
             int iArraysize;
             int i, j, k;
@@ -491,9 +488,9 @@ namespace PgcDemuxCS
                 }
                 if (!bFound)
                 {
-                    if (ifo.vtsi_mat != null)
+                    if (ifo is VtsIfo vts)
                     {
-                        iVideoAttr = ifo.vtsi_mat.vts_video_attr;
+                        iVideoAttr = vts.TitlesVobVideoAttributes;
                         iFormat = iVideoAttr.video_format;
                         if (iFormat == 0) // NTSC
                             TitleInfo.m_AADT_Cell_list[i].dwDuration = 0xC0;
@@ -527,7 +524,7 @@ namespace PgcDemuxCS
                 }
                 if (!bFound)
                 {
-                    iVideoAttr = (ifo.vmgi_mat != null) ? ifo.vmgi_mat.vmgm_video_attr : ifo.vtsi_mat.vtsm_video_attr;
+                    iVideoAttr = ifo.MenuVobVideoAttributes;
                     iFormat = iVideoAttr.video_format;
                     if (iFormat == 0) // NTSC
                         MenuInfo.m_AADT_Cell_list[i].dwDuration = 0xC0;

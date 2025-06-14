@@ -1,4 +1,5 @@
 ﻿using PgcDemuxCS;
+using PgcDemuxCS.DVD;
 using PgcDemuxCS.DVD.IfoTypes.Common;
 using PgcDemuxCS.DVD.IfoTypes.VMGI;
 using PgcDemuxCS.DVD.IfoTypes.VTS;
@@ -28,38 +29,38 @@ namespace UnitTesting
         public void VerifyContents()
         {
             DiscReader discReader = new DiscReader(Path.Combine(DvdBackupPath, $"{DvdName}.iso"));
-            ifo_handle_t[] ifo = new ifo_handle_t[100];
-            ifo[0] = ifo_handle_t.Open(discReader, "VIDEO_TS");
-            Assert.IsNotNull(ifo[0], "Failed to load VMG IFO");
+            VtsIfo[] ifo = new VtsIfo[100];
+            VmgIfo vmg = VmgIfo.Open(discReader);
+            Assert.IsNotNull(vmg, "Failed to load VMG IFO");
             for (int i = 1; i <= 99; i++)
             {
-                ifo[i] = ifo_handle_t.Open(discReader, $"VTS_{i:00}_0.IFO");
+                ifo[i] = VtsIfo.Open(discReader, i);
             }
 
             libdvdread expected = libdvdread.Load(InfoFile);
             Assert.IsNotNull(expected, "Failed to load expected info");
 
-            Assert.AreEqual(expected.VMG_ID, ifo[0].vmgi_mat.vmg_identifier, "VMG Identifier");
-            Assert.AreEqual(expected.ProviderID, ifo[0].vmgi_mat.provider_identifier, "Provider ID");
+            Assert.AreEqual(expected.VMG_ID, vmg.ID, "VMG Identifier");
+            Assert.AreEqual(expected.ProviderID, vmg.ProviderID, "Provider ID");
 
             foreach(var track in expected.Tracks.Where(x => x != null))
             {
-                VerifyTrack(track, ifo);
+                VerifyTrack(track, vmg, ifo);
             }
         }
 
-        private static void VerifyTrack(Track expected, ifo_handle_t[] ifo)
+        private static void VerifyTrack(Track expected, VmgIfo vmg, VtsIfo[] ifo)
         {
-            ifo_handle_t vts_ifo;
+            VtsIfo vts_ifo;
             title_info_t title;
-            FindTrack(expected, ifo, out vts_ifo, out title);
+            FindTrack(expected, vmg, ifo, out vts_ifo, out title);
 
             // Verify data
-            pgcit_t vts_pgcit = vts_ifo.vts_pgcit;
-            var video_attr = vts_ifo.vtsi_mat.vts_video_attr;
-            var vts_id = vts_ifo.vtsi_mat.vts_identifier;
+            pgcit_t vts_pgcit = vts_ifo.TitleProgramChainTable;
+            var video_attr = vts_ifo.TitlesVobVideoAttributes;
+            var vts_id = vts_ifo.ID;
             
-            var pgc = vts_pgcit.pgci_srp[vts_ifo.vts_ptt_srpt.titles[title.vts_ttn - 1].ptt[0].pgcn - 1].pgc;
+            var pgc = vts_pgcit.pgci_srp[vts_ifo.TitlesAndChapters.titles[title.vts_ttn - 1].ptt[0].pgcn - 1].pgc;
 
             var chapter_count_reported = title.nr_of_ptts;
             if (pgc.cell_playback == null || pgc.program_map == null)
@@ -77,10 +78,10 @@ namespace UnitTesting
                 Assert.AreEqual(expected.VtsID, vts_id, "Vts ID did not match");
                 Assert.AreEqual(expected.VTS, Array.IndexOf(ifo, vts_ifo), "VTS number did not match");
                 Assert.AreEqual(expected.FPS, frames_per_s[(pgc.playback_time.frame_u & 0xC0) >> 6], 0.01, "FPS did not match");
-                Assert.AreEqual(expected.Format, GetFormat(vts_ifo.vtsi_mat.vts_video_attr), "Video format did not match");
-                Assert.AreEqual(expected.Aspect, GetAspect(vts_ifo.vtsi_mat.vts_video_attr), "Video aspect ratio did not match");
-                Assert.AreEqual(expected.Width, GetSize(vts_ifo.vtsi_mat.vts_video_attr).Width, "Video width did not match");
-                Assert.AreEqual(expected.Height, GetSize(vts_ifo.vtsi_mat.vts_video_attr).Height, "Video height did not match");
+                Assert.AreEqual(expected.Format, GetFormat(vts_ifo.TitlesVobVideoAttributes), "Video format did not match");
+                Assert.AreEqual(expected.Aspect, GetAspect(vts_ifo.TitlesVobVideoAttributes), "Video aspect ratio did not match");
+                Assert.AreEqual(expected.Width, GetSize(vts_ifo.TitlesVobVideoAttributes).Width, "Video width did not match");
+                Assert.AreEqual(expected.Height, GetSize(vts_ifo.TitlesVobVideoAttributes).Height, "Video height did not match");
                 //Assert.AreEqual(expected.DF, vts_ifo.vtsi_mat.vts_video_attr.);
                 Assert.AreEqual(expected.Angles, title.nr_of_angles, "Number of angles did not match");
 
@@ -139,7 +140,7 @@ namespace UnitTesting
                 {
                     if ((pgc.subp_control[k] & 0x80000000) == 0)
                         continue;
-                    var subp_attr = vts_ifo.vtsi_mat.vts_subp_attr[i];
+                    var subp_attr = vts_ifo.TitlesVobSubpictureAttributes[i];
 
                     var subp = expected.Subpictures.First(x => x.Index - 1 == k);
                     Assert.AreEqual(subp.LanguageCode, string.IsNullOrWhiteSpace(subp_attr.lang_code) ? "xx" : subp_attr.lang_code);
@@ -149,23 +150,22 @@ namespace UnitTesting
             }
         }
 
-        private static void FindTrack(Track track, ifo_handle_t[] ifo, out ifo_handle_t vts, out title_info_t title)
+        private static void FindTrack(Track track, VmgIfo vmg, VtsIfo[] ifo, out VtsIfo vts, out title_info_t title)
         {
-            var titles = ifo[0].tt_srpt.nr_of_srpts;
-            var vmgi_mat = ifo[0].vmgi_mat;
+            var titles = vmg.Titles.nr_of_srpts;
 
             for (int j = 0; j < titles; j++)
             {
-                if (ifo[ifo[0].tt_srpt.title[j].title_set_nr].vtsi_mat != null)
+                if (ifo[vmg.Titles.title[j].title_set_nr] != null)
                 {
-                    vtsi_mat_t vtsi_mat = ifo[ifo[0].tt_srpt.title[j].title_set_nr].vtsi_mat;
-                    var title_set_nr = ifo[0].tt_srpt.title[j].title_set_nr;
-                    var vts_ttn = ifo[0].tt_srpt.title[j].vts_ttn;
+                    var vtsi_mat = ifo[vmg.Titles.title[j].title_set_nr];
+                    var title_set_nr = vmg.Titles.title[j].title_set_nr;
+                    var vts_ttn = vmg.Titles.title[j].vts_ttn;
 
                     if (title_set_nr == track.VTS && vts_ttn == track.TTN)
                     {
-                        vts = ifo[ifo[0].tt_srpt.title[j].title_set_nr];
-                        title = ifo[0].tt_srpt.title[j];
+                        vts = ifo[vmg.Titles.title[j].title_set_nr];
+                        title = vmg.Titles.title[j];
                         return;
                     }
                 }
@@ -276,7 +276,7 @@ namespace UnitTesting
             }
         }
         private static uint[] audio_id = { 0x80, 0, 0xC0, 0xC0, 0xA0, 0, 0x88 };
-        private static audio_attr_t FindAudioStream(AudioTrack track, ifo_handle_t vts, pgc_t pgc, title_info_t title, out string streamID)
+        private static audio_attr_t FindAudioStream(AudioTrack track, VtsIfo vts, pgc_t pgc, title_info_t title, out string streamID)
         {
             for (int i = 0; i < pgc.audio_control.Length; i++)
             {
@@ -284,7 +284,7 @@ namespace UnitTesting
                 {
                     continue;
                 }
-                var attr = vts.vtsi_mat.vts_audio_attr[i];
+                var attr = vts.TitlesVobAudioAttributes[i];
                 streamID = $"0x{(audio_id[attr.audio_format] + i):X2}";
                 if (streamID == track.StreamID)
                 {

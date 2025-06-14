@@ -21,10 +21,6 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
             zero_1 = file.Read<ushort>();
             last_byte = file.Read<uint>();
 
-            // Fix endiness
-            DvdUtils.B2N_16(ref nr_of_pgci_srp);
-            DvdUtils.B2N_32(ref last_byte);
-
             // Verify 
             DvdUtils.CHECK_ZERO(zero_1);
             /* assert(pgcit->nr_of_pgci_srp != 0);

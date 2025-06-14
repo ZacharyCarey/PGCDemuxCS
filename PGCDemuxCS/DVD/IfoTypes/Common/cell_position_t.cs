@@ -18,7 +18,6 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
             cell_nr = file.Read<byte>();
 
             // Verify
-            DvdUtils.B2N_16(ref vob_id_nr);
             DvdUtils.CHECK_ZERO(zero_1);
         }
 

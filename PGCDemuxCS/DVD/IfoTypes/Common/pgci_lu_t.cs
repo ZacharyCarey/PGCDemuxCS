@@ -25,10 +25,6 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
             exists = file.Read<byte>();
             lang_start_byte = file.Read<uint>();
 
-            // Verify
-            DvdUtils.B2N_16(ref lang_code);
-            DvdUtils.B2N_32(ref lang_start_byte);
-
             /* Maybe this is only defined for v1.1 and later titles? */
             /* If the bits in 'lu[i].exists' are enumerated abcd efgh then:
                VTS_x_yy.IFO        VIDEO_TS.IFO

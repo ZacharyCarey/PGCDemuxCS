@@ -18,18 +18,14 @@ namespace PgcDemuxCS.DVD.IfoTypes.VMGI
         /// </summary>
         uint[] vts_atrt_offsets;
 
-        private vts_atrt_t(Stream file, uint sector)
+        internal vts_atrt_t(Stream file, uint offset)
         {
-            file.Seek(sector * DvdUtils.DVD_BLOCK_LEN, SeekOrigin.Begin);
+            file.Seek(offset, SeekOrigin.Begin);
 
             // Read data
             nr_of_vtss = file.Read<ushort>();
             zero_1 = file.Read<ushort>();
             last_byte = file.Read<uint>();
-
-            // Fix endiness
-            DvdUtils.B2N_16(ref nr_of_vtss);
-            DvdUtils.B2N_32(ref last_byte);
 
             // Verify
             DvdUtils.CHECK_ZERO(zero_1);
@@ -43,7 +39,6 @@ namespace PgcDemuxCS.DVD.IfoTypes.VMGI
 
             for (int i = 0; i < nr_of_vtss; i++)
             {
-                DvdUtils.B2N_32(ref vts_atrt_offsets[i]); // Fix endiness
                 DvdUtils.CHECK_VALUE(vts_atrt_offsets[i] + vts_attributes_t.MIN_SIZE < last_byte + 1); // Verify
             }
 
@@ -58,18 +53,5 @@ namespace PgcDemuxCS.DVD.IfoTypes.VMGI
             }*/
         }
 
-        internal static bool ifoRead_VTS_ATRT(Stream file, uint sector, out vts_atrt_t? result)
-        {
-            try
-            {
-                result = new vts_atrt_t(file, sector);
-                return true;
-            }
-            catch (Exception)
-            {
-                result = null;
-                return false;
-            }
-        }
     }
 }

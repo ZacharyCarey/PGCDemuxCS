@@ -16,9 +16,9 @@ namespace PgcDemuxCS.DVD.IfoTypes.VMGI
         public uint last_byte;
         //public txtdt_lu_t? lu = null;
 
-        private txtdt_mgi_t(Stream file, uint sector)
+        internal txtdt_mgi_t(Stream file, uint offset)
         {
-            file.Seek(sector * DvdUtils.DVD_BLOCK_LEN, SeekOrigin.Begin);
+            file.Seek(offset, SeekOrigin.Begin);
 
             // Read data
             disc_name = file.ReadString(12);
@@ -27,20 +27,6 @@ namespace PgcDemuxCS.DVD.IfoTypes.VMGI
             last_byte = file.Read<uint>();
 
             // TODO: What about lu???
-        }
-
-        internal static bool ifoRead_TXTDT_MGI(Stream file, uint sector, out txtdt_mgi_t? result)
-        {
-            try
-            {
-                result = new txtdt_mgi_t(file, sector);
-                return true;
-            }
-            catch (Exception)
-            {
-                result = null;
-                return false;
-            }
         }
     }
 }
