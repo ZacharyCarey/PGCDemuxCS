@@ -114,25 +114,35 @@ namespace UnitTesting
     {
         public readonly string ActualPath;
         public readonly string ExpectedPath;
+        public bool DeleteExpectedCache = true;
+        public readonly bool NewFolder;
 
-        public FileManager()
+        public FileManager(string expectedPath, string actualPath)
         {
-            ActualPath = Directory.CreateTempSubdirectory().FullName;
-            ExpectedPath = Directory.CreateTempSubdirectory().FullName;
+            NewFolder = !Directory.Exists(expectedPath);
+            Directory.CreateDirectory(expectedPath);
+            Directory.CreateDirectory(actualPath);
+
+            ActualPath = actualPath;
+            ExpectedPath = expectedPath;
         }
 
         ~FileManager()
         {
-            try
+            if (DeleteExpectedCache)
             {
-                Directory.Delete(ExpectedPath, true);
+                try
+                {
+                    Directory.Delete(ExpectedPath, true);
+                }
+                catch (Exception ex) { }
             }
-            catch (Exception ex) { }
 
             try
             {
                 Directory.Delete(ActualPath, true);
-            }catch(Exception ex) { }
+            }
+            catch (Exception ex) { }
         }
     }
 
@@ -140,6 +150,8 @@ namespace UnitTesting
     {
         private const string PgcDemuxPath = "C:\\Users\\Zack\\Downloads\\PgcDemux_1205_exe\\PgcDemux.exe";
         private const string DvdBackupPath = "C:\\Users\\Zack\\Videos";
+        private const string TestCachePath = "C:\\Users\\Zack\\Downloads\\UnitTestCache\\";
+        private const bool ReadISO = true;
 
         private readonly string DvdName;
         private readonly lsdvd Info;
@@ -169,32 +181,45 @@ namespace UnitTesting
             input.Destination = dest;
         }
 
-        private void CompareOutput(string expectedCommand, PgcDemuxOptions actualCommand, params string[] vars)
+        private void CompareOutput(string cacheFolder, string expectedCommand, PgcDemuxOptions actualCommand, params string[] vars)
         {
-            FileManager Files = new FileManager();
+            FileManager cache = new FileManager(Path.Combine(TestCachePath, cacheFolder, "Expected"), Path.Combine(TestCachePath, cacheFolder, "Actual"));
 
             // Replace variables in command
-            expectedCommand = FillVariables(expectedCommand, Files.ExpectedPath, vars);
-            FillVariables(actualCommand, Files.ActualPath);
+            expectedCommand = FillVariables(expectedCommand, cache.ExpectedPath, vars);
+            FillVariables(actualCommand, cache.ActualPath);
 
             // Run PgcDemux.exe
-            var proc = Process.Start(PgcDemuxPath, expectedCommand);
+            Process? proc = null;
+            if (cache.NewFolder)
+            {
+                if (ReadISO) throw new Exception("Can't run PgcDemux using the ISO.");
+                proc = Process.Start(PgcDemuxPath, expectedCommand);
+            }
 
             // Run PgcDemuxCS
-            PgcDemux.Run(actualCommand, $"{DvdBackupPath}\\{DvdName}");
+            if (ReadISO)
+            {
+                var reader = new DiscReader(Path.Combine(DvdBackupPath, $"{DvdName}.iso"));
+                PgcDemux.Run(actualCommand, reader);
+                reader.Dispose();
+            } else
+            {
+                PgcDemux.Run(actualCommand, Path.Combine(DvdBackupPath, DvdName));
+            }
 
-            proc.WaitForExit();
+            if (proc != null) proc.WaitForExit();
 
             // Verify files are the same
-            string[] expectedFiles = Directory.GetFiles(Files.ExpectedPath);
-            string[] actualFiles = Directory.GetFiles(Files.ActualPath);
+            string[] expectedFiles = Directory.GetFiles(cache.ExpectedPath);
+            string[] actualFiles = Directory.GetFiles(cache.ActualPath);
             Assert.AreEqual(expectedFiles.Length, actualFiles.Length, "Number of generated files did not match.");
 
             // Check file contents
             foreach (var expectedFilePath in expectedFiles)
             {
                 string fileName = Path.GetFileName(expectedFilePath);
-                var actualFilePath = Path.Combine(Files.ActualPath, fileName);
+                var actualFilePath = Path.Combine(cache.ActualPath, fileName);
                 Assert.IsTrue(File.Exists(actualFilePath), $"Could not find expected file '{fileName}'.");
 
                 string errMsg = $"Actual file {fileName} did not match the expected file.";
@@ -217,16 +242,18 @@ namespace UnitTesting
                     }
                 }
             }
+
+            cache.DeleteExpectedCache = false;
         }
-        private void CompareOutput(TestParams test)
+        private void CompareOutput(TestParams test, string cacheFolder)
         {
-            CompareOutput(test.ExpectedArgs, test.ActualArgs);
+            CompareOutput(cacheFolder, test.ExpectedArgs, test.ActualArgs);
         }
-        private void CompareOutput(TestParams[] tests)
+        private void CompareOutput(TestParams[] tests, string cacheFolder)
         {
             foreach (var test in tests)
             {
-                CompareOutput(test.ExpectedArgs, test.ActualArgs);
+                CompareOutput(cacheFolder, test.ExpectedArgs, test.ActualArgs);
             }
         }
 
@@ -237,14 +264,16 @@ namespace UnitTesting
             test.Mode = ModeType.PGC;
             test.Domain = DomainType.Menus;
             test.CustomVOB = true;
-            
-            foreach(var ifo in Info.IfoFiles)
+            int index = -1;
+
+            foreach (var ifo in Info.IfoFiles)
             {
                 test.IfoFileName = ifo.Name;
-                foreach(var id in ifo.MenuPGCs)
+                foreach (var id in ifo.MenuPGCs)
                 {
                     test.ID = id;
-                    CompareOutput(test);
+                    index++;
+                    CompareOutput(test, Path.Combine(DvdName, "CustomVOB_PGC_Menu", $"Test-{index:0000}"));
                 }
             }
         }
@@ -256,6 +285,7 @@ namespace UnitTesting
             test.Mode = ModeType.PGC;
             test.Domain = DomainType.Titles;
             test.CustomVOB = true;
+            int index = -1;
 
             foreach (var ifo in Info.IfoFiles)
             {
@@ -264,10 +294,11 @@ namespace UnitTesting
                 {
                     test.ID = id;
                     int angles = ifo.Angles.GetValueOrDefault(id.ToString(), 1);
-                    for(int angle = 1; angle <= angles; angle++)
+                    for (int angle = 1; angle <= angles; angle++)
                     {
                         test.Angle = angle;
-                        CompareOutput(test);
+                        index++;
+                        CompareOutput(test, Path.Combine(DvdName, "CustomVOB_PGC_Title", $"Test-{index:0000}"));
                     }
                 }
             }
@@ -280,6 +311,7 @@ namespace UnitTesting
             test.Mode = ModeType.VID;
             test.Domain = DomainType.Menus;
             test.CustomVOB = true;
+            int index = -1;
 
             foreach (var ifo in Info.IfoFiles)
             {
@@ -287,7 +319,8 @@ namespace UnitTesting
                 foreach (var id in ifo.MenuVIDs)
                 {
                     test.ID = id;
-                    CompareOutput(test);
+                    index++;
+                    CompareOutput(test, Path.Combine(DvdName, "CustomVOB_VID_Menu", $"Test-{index:0000}"));
                 }
             }
         }
@@ -299,6 +332,7 @@ namespace UnitTesting
             test.Mode = ModeType.VID;
             test.Domain = DomainType.Titles;
             test.CustomVOB = true;
+            int index = -1;
 
             foreach (var ifo in Info.IfoFiles)
             {
@@ -306,7 +340,8 @@ namespace UnitTesting
                 foreach (var id in ifo.TitleVIDs)
                 {
                     test.ID = id;
-                    CompareOutput(test);
+                    index++;
+                    CompareOutput(test, Path.Combine(DvdName, "CustomVOB_VID_Title", $"Test-{index:0000}"));
                 }
             }
         }
@@ -318,6 +353,7 @@ namespace UnitTesting
             test.Mode = ModeType.CID;
             test.Domain = DomainType.Menus;
             test.CustomVOB = true;
+            int index = -1;
 
             foreach (var ifo in Info.IfoFiles)
             {
@@ -326,7 +362,8 @@ namespace UnitTesting
                 {
                     test.ID = cell[0];
                     test.CID = cell[1];
-                    CompareOutput(test);
+                    index++;
+                    CompareOutput(test, Path.Combine(DvdName, "CustomVOB_Cell_Menu", $"Test-{index:0000}"));
                 }
             }
         }
@@ -338,6 +375,7 @@ namespace UnitTesting
             test.Mode = ModeType.CID;
             test.Domain = DomainType.Titles;
             test.CustomVOB = true;
+            int index = -1;
 
             foreach (var ifo in Info.IfoFiles)
             {
@@ -346,7 +384,8 @@ namespace UnitTesting
                 {
                     test.ID = cell[0];
                     test.CID = cell[1];
-                    CompareOutput(test);
+                    index++;
+                    CompareOutput(test, Path.Combine(DvdName, "CustomVOB_Cell_Title", $"Test-{index:0000}"));
                 }
             }
         }
@@ -360,6 +399,7 @@ namespace UnitTesting
             test.ExtractVideo = true;
             test.ExtractAudio = true;
             test.ExtractSubs = true;
+            int index = -1;
 
             foreach (var ifo in Info.IfoFiles)
             {
@@ -367,7 +407,8 @@ namespace UnitTesting
                 foreach (var id in ifo.MenuPGCs)
                 {
                     test.ID = id;
-                    CompareOutput(test);
+                    index++;
+                    CompareOutput(test, Path.Combine(DvdName, "Extract_PGC_Menu", $"Test-{index:0000}"));
                 }
             }
         }
@@ -381,6 +422,7 @@ namespace UnitTesting
             test.ExtractVideo = true;
             test.ExtractAudio = true;
             test.ExtractSubs = true;
+            int index = -1;
 
             foreach (var ifo in Info.IfoFiles)
             {
@@ -392,7 +434,8 @@ namespace UnitTesting
                     for (int angle = 1; angle <= angles; angle++)
                     {
                         test.Angle = angle;
-                        CompareOutput(test);
+                        index++;
+                        CompareOutput(test, Path.Combine(DvdName, "Extract_PGC_Title", $"Test-{index:0000}"));
                     }
                 }
             }
@@ -407,6 +450,7 @@ namespace UnitTesting
             test.ExtractVideo = true;
             test.ExtractAudio = true;
             test.ExtractSubs = true;
+            int index = -1;
 
             foreach (var ifo in Info.IfoFiles)
             {
@@ -414,7 +458,8 @@ namespace UnitTesting
                 foreach (var id in ifo.MenuVIDs)
                 {
                     test.ID = id;
-                    CompareOutput(test);
+                    index++;
+                    CompareOutput(test, Path.Combine(DvdName, "Extract_VID_Menu", $"Test-{index:0000}"));
                 }
             }
         }
@@ -428,6 +473,7 @@ namespace UnitTesting
             test.ExtractVideo = true;
             test.ExtractAudio = true;
             test.ExtractSubs = true;
+            int index = -1;
 
             foreach (var ifo in Info.IfoFiles)
             {
@@ -435,7 +481,8 @@ namespace UnitTesting
                 foreach (var id in ifo.TitleVIDs)
                 {
                     test.ID = id;
-                    CompareOutput(test);
+                    index++;
+                    CompareOutput(test, Path.Combine(DvdName, "Extract_VID_Title", $"Test-{index:0000}"));
                 }
             }
         }
@@ -449,6 +496,7 @@ namespace UnitTesting
             test.ExtractVideo = true;
             test.ExtractAudio = true;
             test.ExtractSubs = true;
+            int index = -1;
 
             foreach (var ifo in Info.IfoFiles)
             {
@@ -457,7 +505,8 @@ namespace UnitTesting
                 {
                     test.ID = cell[0];
                     test.CID = cell[1];
-                    CompareOutput(test);
+                    index++;
+                    CompareOutput(test, Path.Combine(DvdName, "Extract_Cell_Menu", $"Test-{index:0000}"));
                 }
             }
         }
@@ -471,6 +520,7 @@ namespace UnitTesting
             test.ExtractVideo = true;
             test.ExtractAudio = true;
             test.ExtractSubs = true;
+            int index = -1;
 
             foreach (var ifo in Info.IfoFiles)
             {
@@ -479,7 +529,8 @@ namespace UnitTesting
                 {
                     test.ID = cell[0];
                     test.CID = cell[1];
-                    CompareOutput(test);
+                    index++;
+                    CompareOutput(test, Path.Combine(DvdName, "Extract_Cell_Title", $"Test-{index:0000}"));
                 }
             }
         }

@@ -15,7 +15,7 @@ namespace UnitTesting
     [TestClass]
     public abstract class libdvdread_UnitTests
     {
-        private const string DvdBackupPath = "C:\\Users\\Zack\\Videos";
+        private const string DvdBackupPath = "D:\\";
         private readonly string DvdName;
         private readonly string InfoFile;
 
@@ -176,18 +176,6 @@ namespace UnitTesting
         }
 
         private static double[] frames_per_s = { -1.0, 25.00, -1.0, 29.97 };
-        private static double dvdtime2msec(dvd_time_t dt)
-        {
-            double fps = frames_per_s[(dt.frame_u & 0xC0) >> 6];
-            long ms = (((dt.hour & 0xF0) >> 3) * 5 + (dt.hour & 0x0F)) * 3600000;
-            ms += (((dt.minute & 0xF0) >> 3) * 5 + (dt.minute & 0x0F)) * 60000;
-            ms += (((dt.second & 0xF0) >> 3) * 5 + (dt.second & 0x0F)) * 1000;
-
-            if (fps > 0)
-                ms += (long)((((dt.frame_u & 0x30) >> 3) * 5 + (dt.frame_u & 0x0F)) * 1000.0 / fps);
-
-            return ms;
-        }
         private static string GetFormat(video_attr_t attr)
         {
             switch (attr.video_format)
@@ -294,19 +282,6 @@ namespace UnitTesting
 
             Assert.Fail("Could not find audio stream.");
             throw new Exception();
-        }
-        private static void converttime(ref playback_time_t pt, dvd_time_t dt)
-        {
-            double fps = frames_per_s[(dt.frame_u & 0xC0) >> 6];
-
-            pt.usec += (((dt.frame_u & 0x30) >> 3) * 5 + (dt.frame_u & 0x0f)) * (int)(1000.0 / fps);
-            pt.second += ((dt.second & 0xf0) >> 3) * 5 + (dt.second & 0x0f);
-            pt.minute += ((dt.minute & 0xf0) >> 3) * 5 + (dt.minute & 0x0f);
-            pt.hour += ((dt.hour & 0xf0) >> 3) * 5 + (dt.hour & 0x0f);
-
-            if (pt.usec >= 1000) { pt.usec -= 1000; pt.second++; }
-            if (pt.second >= 60) { pt.second -= 60; pt.minute++; }
-            if (pt.minute > 59) { pt.minute -= 60; pt.hour++; }
         }
     }
 
