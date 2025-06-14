@@ -16,13 +16,13 @@ namespace PgcDemuxCS.DVD
         public readonly PartOfTitleSearchPointerTable? TitlesAndChapters = null;
         public readonly ProgamChainInformationTable? TitleProgramChainTable = null;
         public override MenuProgramChainLanguageUnitTable? MenuProgramChainTable { get; } = null; 
-        public readonly vts_tmapt_t? TimeMap = null; 
+        public readonly TimeMapTable? TimeMap = null; 
         public readonly CellAddressTable? TitleCellAddressTable = null;
         public readonly VobuAddressMap? TitleVobuAddressMap = null; 
         public readonly VideoAttributes TitlesVobVideoAttributes; 
         public readonly AudioAttributes[] TitlesVobAudioAttributes; 
         public readonly SubpictureAttributes[] TitlesVobSubpictureAttributes; 
-        public readonly multichannel_ext_t[] MultichannelExtensions = new multichannel_ext_t[8];
+        public readonly MultichannelExtension[] MultichannelExtensions = new MultichannelExtension[8];
 
         private VtsIfo(Stream file) : base(file)
         {
@@ -58,7 +58,7 @@ namespace PgcDemuxCS.DVD
             file.Seek(0xD4, SeekOrigin.Begin);
             uint timeMapSector = file.Read<uint>();
             DvdUtils.CHECK_VALUE(timeMapSector <= LastIFOSector);
-            if (timeMapSector != 0) TimeMap = new vts_tmapt_t(file, timeMapSector *  DvdUtils.DVD_BLOCK_LEN);
+            if (timeMapSector != 0) TimeMap = new TimeMapTable(file, timeMapSector *  DvdUtils.DVD_BLOCK_LEN);
 
             file.Seek(0xE0, SeekOrigin.Begin);
             uint cellAddrSector = file.Read<uint>();
@@ -89,7 +89,7 @@ namespace PgcDemuxCS.DVD
 
             file.ReadZeros(2);
 
-            file.Read<multichannel_ext_t>(MultichannelExtensions);
+            file.Read<MultichannelExtension>(MultichannelExtensions);
 
             file.ReadZeros(40);
         }
