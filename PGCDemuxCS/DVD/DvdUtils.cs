@@ -89,6 +89,36 @@ namespace PgcDemuxCS.DVD
                 }
             }
         }
+
+        public static TimeSpan ReadDuration(this Stream file, out double fps)
+        {
+            // BCD values
+            byte hour = file.Read<byte>();
+            byte minute = file.Read<byte>();
+            byte second = file.Read<byte>();
+            byte frame_u = file.Read<byte>();
+            int fpsIndex = (frame_u & 0xC0) >> 6;
+
+            double ms = 0;
+            ms += (((hour & 0xF0) >> 3) * 5 + (hour & 0x0F)) * 3600000.0;
+            ms += (((minute & 0xF0) >> 3) * 5 + (minute & 0x0F)) * 60000.0;
+            ms += (((second & 0xF0) >> 3) * 5 + (second & 0x0F)) * 1000.0;
+
+            int frames = ((frame_u & 0x30) >> 3) * 5 + (frame_u & 0x0F);
+            if (fpsIndex == 0) fps = 0.0;
+            else if (fpsIndex == 1)
+            {
+                fps = 25.0;
+                ms += 40.0 * frames;
+            }
+            else if (fpsIndex == 3) { 
+                fps = 30000.0 / 1001.0;
+                ms += (1000.0 * 1001.0 / 30000.0) * frames;
+            }
+            else throw new IOException("Invalid FPS.");
+
+            return TimeSpan.FromMilliseconds(ms);
+        }
     }
 
     internal interface IStreamReadable<T> {

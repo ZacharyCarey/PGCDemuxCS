@@ -37,7 +37,7 @@ namespace PgcDemuxCS.DVD
         /// </summary>
         public readonly ulong VmgPosCode;
 
-        public readonly pgc_t? FirstPlayPGC = null;
+        public readonly PGC? FirstPlayPGC = null;
         public readonly tt_srpt_t? Titles = null; 
         public override pgci_ut_t? MenuProgramChainTable { get; } = null;
         public readonly ptl_mait_t? ParentalManagementMasks = null;
@@ -66,7 +66,7 @@ namespace PgcDemuxCS.DVD
             file.Seek(0x84, SeekOrigin.Begin);
             uint firstPlayAddr = file.Read<uint>(); // Absolute, not sector
             DvdUtils.CHECK_VALUE(firstPlayAddr < LastByteIndex);
-            if (firstPlayAddr != 0) FirstPlayPGC = new pgc_t(file, firstPlayAddr);
+            if (firstPlayAddr != 0) FirstPlayPGC = new PGC(file, firstPlayAddr);
 
             file.Seek(0xC4, SeekOrigin.Begin);
             uint tableOfTitlesSector = file.Read<uint>();

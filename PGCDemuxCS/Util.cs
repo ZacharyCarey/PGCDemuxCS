@@ -125,6 +125,11 @@ namespace PgcDemuxCS
             return ret;
         }
 
+        public static int DurationInFrames(TimeSpan duration, double fps)
+        {
+            return (int)(duration.TotalSeconds * fps);
+        }
+
         public static int DurationInSecs(ulong dwDuration)
         {
 

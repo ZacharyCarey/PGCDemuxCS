@@ -1,4 +1,5 @@
 using PgcDemuxCS;
+using PgcDemuxCS.DVD.IfoTypes.Common;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
@@ -270,7 +271,7 @@ namespace PgcDemuxCS
                 fout = CFILE.OpenWrite(csAux);
                 foreach (var cell in cells)
                 {
-                    nFrames += Util.DurationInFrames(cell.Duration);
+                    nFrames += Util.DurationInFrames(cell.Duration, 25);
                     if (cell.Index != (domainInfo.m_nCells[nPGC] - 1) || Options.m_bCheckEndTime)
                         fout.fprintf($"{nFrames}\n");
 
@@ -375,7 +376,7 @@ namespace PgcDemuxCS
 
                 foreach (var cell in cells)
                 {
-                    nFrames += Util.DurationInFrames(cell.Duration);
+                    nFrames += Util.DurationInFrames(cell.Duration, 25);
                     if (cell.Index != nLastCell.Index || Options.m_bCheckEndTime)
                         fout.fprintf($"{nFrames}\n");
 
@@ -467,7 +468,7 @@ namespace PgcDemuxCS
             {
                 csAux = Path.Combine(Options.m_csOutputPath, "Celltimes.txt");
                 fout = CFILE.OpenWrite(csAux);
-                nFrames = Util.DurationInFrames(nCell.Duration);
+                nFrames = Util.DurationInFrames(nCell.Duration, 25);
                 if (Options.m_bCheckEndTime)
                     fout.fprintf($"{nFrames}\n");
                 fout.fclose();
@@ -1076,8 +1077,8 @@ namespace PgcDemuxCS
                     return -1;
                 }
                 nCell = 0;
-                VID = domainInfo.m_C_POST[nSelection][nCell].vob_id_nr;
-                CID = domainInfo.m_C_POST[nSelection][nCell].cell_nr;
+                VID = domainInfo.m_C_POST[nSelection][nCell].VobID;
+                CID = domainInfo.m_C_POST[nSelection][nCell].CellID;
             }
             else if (iMode == ModeType.VID)
             {
@@ -1225,12 +1226,12 @@ namespace PgcDemuxCS
         {
             for (int nCell = 0; nCell < domainInfo.m_nCells[nPGC]; nCell++)
             {
-                int VID = domainInfo.m_C_POST[nPGC][nCell].vob_id_nr;
-                int CID = domainInfo.m_C_POST[nPGC][nCell].cell_nr;
-                long iIniSec = domainInfo.m_C_PBKT[nPGC][nCell].first_sector;
-                long iEndSec = domainInfo.m_C_PBKT[nPGC][nCell].last_sector;
+                int VID = domainInfo.m_C_POST[nPGC][nCell].VobID;
+                int CID = domainInfo.m_C_POST[nPGC][nCell].CellID;
+                long iIniSec = domainInfo.m_C_PBKT[nPGC][nCell].FirstSector;
+                long iEndSec = domainInfo.m_C_PBKT[nPGC][nCell].LastSector;
                 int iSize = GetAllCells(domainInfo).SelectCID(VID, CID).Sum(x => x.Size);
-                ulong dwDuration = (uint)domainInfo.m_C_PBKT[nPGC][nCell].playback_time.Raw;
+                TimeSpan dwDuration = domainInfo.m_C_PBKT[nPGC][nCell].PlaybackTime;
                 yield return new CellID(nCell, VID, CID, iSize, iIniSec, iEndSec, dwDuration);
             }
         }
@@ -1251,23 +1252,25 @@ namespace PgcDemuxCS
         public static IEnumerable<CellID> SelectAngle(this IEnumerable<CellID> cells, int nPGC, int angle, DomainInfo domainInfo)
         {
             int nCurrAngle = 0;
-            int iCat = 0;
             foreach (CellID cell in cells)
             {
                 // Check angle info
-                iCat = domainInfo.m_C_PBKT[nPGC][cell.Index].iCat;
-                iCat = iCat & 0xF0;
-                //		0101=First; 1001=Middle ;	1101=Last
-                if (iCat == 0x50)
+                var cellInfo = domainInfo.m_C_PBKT[nPGC][cell.Index];
+                bool isFirstAngle = (cellInfo.CellType == AngleBlockType.First && cellInfo.BlockType == BlockType.Angle);
+                bool isMiddleAngle = (cellInfo.CellType == AngleBlockType.Middle && cellInfo.BlockType == BlockType.Angle);
+                bool isLastAngle = (cellInfo.CellType == AngleBlockType.Last && cellInfo.BlockType == BlockType.Angle);
+                bool isNormal = (cellInfo.CellType == AngleBlockType.Normal && cellInfo.BlockType == BlockType.Normal);
+
+                if (isFirstAngle)
                     nCurrAngle = 1;
-                else if ((iCat == 0x90 || iCat == 0xD0) && nCurrAngle != 0)
+                else if ((isMiddleAngle || isLastAngle) && nCurrAngle != 0)
                     nCurrAngle++;
 
-                if (iCat == 0 || (angle + 1) == nCurrAngle)
+                if (isNormal || (angle + 1) == nCurrAngle)
                 {
                     yield return cell;
                 }
-                if (iCat == 0xD0) nCurrAngle = 0;
+                if (isLastAngle) nCurrAngle = 0;
             }
         }
 
@@ -1302,7 +1305,7 @@ namespace PgcDemuxCS
         public int Size;
         public long StartSector;
         public long EndSector;
-        public ulong Duration;
+        public TimeSpan Duration;
         public int Angle = 1;
 
         public CellID()
@@ -1313,10 +1316,10 @@ namespace PgcDemuxCS
             Size = 0;
             StartSector = 0;
             EndSector = 0;
-            Duration = 0;
+            Duration = TimeSpan.Zero;
         }
 
-        public CellID(int index, int vid, int cid, int size, long startSec, long endSec, ulong duration)
+        public CellID(int index, int vid, int cid, int size, long startSec, long endSec, TimeSpan duration)
         {
             this.Index = index;
             this.VID = vid;

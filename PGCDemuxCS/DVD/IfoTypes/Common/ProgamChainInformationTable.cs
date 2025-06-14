@@ -48,7 +48,7 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
             for (int i = 0; i < pgci_srp.Length; i++)
             {
                 pgci_srp[i] = new ProgramChainInfoSearchPointer(file, isVMG);
-                DvdUtils.CHECK_VALUE(pgci_srp[i].Offset + pgc_t.Size <= last_byte + 1);
+                DvdUtils.CHECK_VALUE(pgci_srp[i].Offset + PGC.Size <= last_byte + 1);
             }
 
             // Look for duplicates and create PGCs
@@ -57,12 +57,10 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
                 int dup;
                 if ((dup = find_dup_pgc(pgci_srp[i].Offset, i)) >= 0)
                 {
-                    pgci_srp[i].pgc = pgci_srp[dup].pgc;
-                    pgci_srp[i].pgc.ref_count++;
+                    pgci_srp[i].Pgc = pgci_srp[dup].Pgc;
                     continue;
                 }
-                pgci_srp[i].pgc = new pgc_t(file, offset + pgci_srp[i].Offset);
-                pgci_srp[i].pgc.ref_count = 1;
+                pgci_srp[i].Pgc = new PGC(file, offset + pgci_srp[i].Offset);
             }
 
             foreach (var pgci in pgci_srp)

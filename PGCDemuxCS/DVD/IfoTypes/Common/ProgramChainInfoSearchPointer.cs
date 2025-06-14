@@ -8,7 +8,7 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
     {
         public readonly PgcCategory Category;
         internal readonly uint Offset;
-        public pgc_t pgc { get; internal set; } // Gets set by ProgamChainInformationTable
+        public PGC Pgc { get; internal set; } // Gets set by ProgamChainInformationTable
 
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
         internal ProgramChainInfoSearchPointer(Stream file, bool isVMG)

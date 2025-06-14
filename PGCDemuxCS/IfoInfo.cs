@@ -18,8 +18,8 @@ namespace PgcDemuxCS
         public int m_nPGCs;
 
         public int[] m_nCells = new int[IfoInfo.MAX_PGC];
-        public cell_position_t[][] m_C_POST = new cell_position_t[IfoInfo.MAX_PGC][];
-        public cell_playback_t[][] m_C_PBKT = new cell_playback_t[IfoInfo.MAX_PGC][];
+        public CellPositionInfo[][] m_C_POST = new CellPositionInfo[IfoInfo.MAX_PGC][];
+        public CellPlaybackInfo[][] m_C_PBKT = new CellPlaybackInfo[IfoInfo.MAX_PGC][];
 
         // Compiled list of menu and title cells
         public CArray<ADT_CELL_LIST> m_AADT_Cell_list = new();
@@ -50,13 +50,13 @@ namespace PgcDemuxCS
 
         public readonly int[] m_nAngles = new int[MAX_PGC];
 
-        public readonly ulong[] m_dwDuration = new ulong[MAX_PGC];
-        public readonly ulong[] m_dwMDuration = new ulong[MAX_MPGC];
+        public readonly TimeSpan[] m_dwDuration = new TimeSpan[MAX_PGC];
+        public readonly TimeSpan[] m_dwMDuration = new TimeSpan[MAX_MPGC];
 
         public readonly ProgamChainInformationTable[] m_iVTSM_LU = new ProgamChainInformationTable[MAX_LU];
         public readonly int[] m_nIniPGCinLU = new int[MAX_LU];
         public readonly int[] m_nPGCinLU = new int[MAX_LU];
-        public readonly pgc_t[] m_iMENU_PGC = new pgc_t[MAX_MPGC];
+        public readonly PGC[] m_iMENU_PGC = new PGC[MAX_MPGC];
         public readonly int[] m_nLU_MPGC = new int[MAX_MPGC];
 
         public int m_nLUs;
@@ -140,27 +140,31 @@ namespace PgcDemuxCS
                 }
                 for (k = 0; k < TitleInfo.m_nPGCs; k++)
                 {
-                    var pgc = vts.TitleProgramChainTable[k].pgc;
-                    m_dwDuration[k] = pgc.playback_time.Raw;
+                    var pgc = vts.TitleProgramChainTable[k].Pgc;
+                    m_dwDuration[k] = pgc.PlaybackTime;
 
-                    TitleInfo.m_C_PBKT[k] = (pgc.cell_playback_offset == 0) ? null : pgc.cell_playback;
-                    TitleInfo.m_C_POST[k] = (pgc.cell_position_offset == 0) ? null : pgc.cell_position;
+                    TitleInfo.m_C_PBKT[k] = (pgc.CellPlayback.Length == 0) ? null : pgc.CellPlayback;
+                    TitleInfo.m_C_POST[k] = (pgc.CellPosition.Length == 0) ? null : pgc.CellPosition;
 
-                    TitleInfo.m_nCells[k] = vts.TitleProgramChainTable[k].pgc.nr_of_cells;
+                    TitleInfo.m_nCells[k] = vts.TitleProgramChainTable[k].Pgc.NumberOfCells;
 
 
                     m_nAngles[k] = 1;
 
                     for (nCell = 0, bEndAngle = false; nCell < TitleInfo.m_nCells[k] && bEndAngle == false; nCell++)
                     {
-                        iCat = vts.TitleProgramChainTable[k].pgc.cell_playback[nCell].iCat;
-                        iCat = iCat & 0xF0;
+                        var cellInfo = vts.TitleProgramChainTable[k].Pgc.CellPlayback[nCell];
+                        bool isFirstAngle = (cellInfo.CellType == AngleBlockType.First && cellInfo.BlockType == BlockType.Angle);
+                        bool isMiddleAngle = (cellInfo.CellType == AngleBlockType.Middle && cellInfo.BlockType == BlockType.Angle);
+                        bool isLastAngle = (cellInfo.CellType == AngleBlockType.Last && cellInfo.BlockType == BlockType.Angle);
+                        bool isNormal = (cellInfo.CellType == AngleBlockType.Normal && cellInfo.BlockType == BlockType.Normal);
+
                         //			0101=First; 1001=Middle ;	1101=Last
-                        if (iCat == 0x50)
+                        if (isFirstAngle)
                             m_nAngles[k] = 1;
-                        else if (iCat == 0x90)
+                        else if (isMiddleAngle)
                             m_nAngles[k]++;
-                        else if (iCat == 0xD0)
+                        else if (isLastAngle)
                         {
                             m_nAngles[k]++;
                             bEndAngle = true;
@@ -202,12 +206,12 @@ namespace PgcDemuxCS
                     }
                     nAbsPGC = j + MenuInfo.m_nPGCs;
                     m_nLU_MPGC[nAbsPGC] = nLU;
-                    m_iMENU_PGC[nAbsPGC] = m_iVTSM_LU[nLU][j].pgc;
+                    m_iMENU_PGC[nAbsPGC] = m_iVTSM_LU[nLU][j].Pgc;
 
-                    MenuInfo.m_C_PBKT[nAbsPGC] = (m_iMENU_PGC[nAbsPGC].cell_playback_offset == 0) ? null : m_iMENU_PGC[nAbsPGC].cell_playback;
-                    MenuInfo.m_C_POST[nAbsPGC] = (m_iMENU_PGC[nAbsPGC].cell_position_offset == 0) ? null : m_iMENU_PGC[nAbsPGC].cell_position;
+                    MenuInfo.m_C_PBKT[nAbsPGC] = (m_iMENU_PGC[nAbsPGC].CellPlayback.Length == 0) ? null : m_iMENU_PGC[nAbsPGC].CellPlayback;
+                    MenuInfo.m_C_POST[nAbsPGC] = (m_iMENU_PGC[nAbsPGC].CellPosition.Length == 0) ? null : m_iMENU_PGC[nAbsPGC].CellPosition;
 
-                    MenuInfo.m_nCells[nAbsPGC] = m_iMENU_PGC[nAbsPGC].nr_of_cells;
+                    MenuInfo.m_nCells[nAbsPGC] = m_iMENU_PGC[nAbsPGC].NumberOfCells;
 
                     if ((MenuInfo.m_C_PBKT[nAbsPGC] == null || MenuInfo.m_C_POST[nAbsPGC] == null) && MenuInfo.m_nCells[nAbsPGC] != 0)
                     // There is something wrong...
@@ -217,7 +221,7 @@ namespace PgcDemuxCS
                         Util.MyErrorBox(csAux);
                         throw new IOException(csAux);
                     }
-                    m_dwMDuration[nAbsPGC] = m_iMENU_PGC[nAbsPGC].playback_time.Raw;
+                    m_dwMDuration[nAbsPGC] = m_iMENU_PGC[nAbsPGC].PlaybackTime;
 
                 } // For PGCs
                 MenuInfo.m_nPGCs += m_nPGCinLU[nLU];
@@ -335,13 +339,13 @@ namespace PgcDemuxCS
                     myADT_Vid.VID = VidADT;
                     myADT_Vid.iSize = 0;
                     myADT_Vid.nCells = 0;
-                    myADT_Vid.dwDuration = 0;
+                    myADT_Vid.dwDuration = TimeSpan.Zero;
                     TitleInfo.m_AADT_Vid_list.SetAtGrow(nVIDs, myADT_Vid);
                     kk = nVIDs;
                 }
                 TitleInfo.m_AADT_Vid_list[kk].iSize += TitleInfo.m_AADT_Cell_list[i].iSize;
                 TitleInfo.m_AADT_Vid_list[kk].nCells++;
-                TitleInfo.m_AADT_Vid_list[kk].dwDuration = Util.AddDuration(TitleInfo.m_AADT_Cell_list[i].dwDuration, TitleInfo.m_AADT_Vid_list[kk].dwDuration);
+                TitleInfo.m_AADT_Vid_list[kk].dwDuration = TitleInfo.m_AADT_Cell_list[i].dwDuration + TitleInfo.m_AADT_Vid_list[kk].dwDuration;
             }
 
             // VIDs in Menus
@@ -365,13 +369,13 @@ namespace PgcDemuxCS
                     myADT_Vid.VID = VidADT;
                     myADT_Vid.iSize = 0;
                     myADT_Vid.nCells = 0;
-                    myADT_Vid.dwDuration = 0;
+                    myADT_Vid.dwDuration = TimeSpan.Zero;
                     MenuInfo.m_AADT_Vid_list.SetAtGrow(nVIDs, myADT_Vid);
                     kk = nVIDs;
                 }
                 MenuInfo.m_AADT_Vid_list[kk].iSize += MenuInfo.m_AADT_Cell_list[i].iSize;
                 MenuInfo.m_AADT_Vid_list[kk].nCells++;
-                MenuInfo.m_AADT_Vid_list[kk].dwDuration = Util.AddDuration(MenuInfo.m_AADT_Cell_list[i].dwDuration, MenuInfo.m_AADT_Vid_list[kk].dwDuration);
+                MenuInfo.m_AADT_Vid_list[kk].dwDuration = MenuInfo.m_AADT_Cell_list[i].dwDuration + MenuInfo.m_AADT_Vid_list[kk].dwDuration;
             }
 
             // Fill VOB file size
@@ -477,12 +481,12 @@ namespace PgcDemuxCS
                 {
                     for (k = 0; k < TitleInfo.m_nCells[j]; k++)
                     {
-                        VIDa = TitleInfo.m_C_POST[j][k].vob_id_nr;
-                        CIDa = TitleInfo.m_C_POST[j][k].cell_nr;
+                        VIDa = TitleInfo.m_C_POST[j][k].VobID;
+                        CIDa = TitleInfo.m_C_POST[j][k].CellID;
                         if (VIDa == VIDb && CIDa == CIDb)
                         {
                             bFound = true;
-                            TitleInfo.m_AADT_Cell_list[i].dwDuration = (ulong)TitleInfo.m_C_PBKT[j][k].playback_time.Raw;
+                            TitleInfo.m_AADT_Cell_list[i].dwDuration = TitleInfo.m_C_PBKT[j][k].PlaybackTime;
                         }
                     }
                 }
@@ -492,13 +496,15 @@ namespace PgcDemuxCS
                     {
                         iVideoAttr = vts.TitlesVobVideoAttributes;
                         iFormat = iVideoAttr.video_format;
-                        if (iFormat == 0) // NTSC
+                        /*if (iFormat == 0) // NTSC
                             TitleInfo.m_AADT_Cell_list[i].dwDuration = 0xC0;
                         else // PAL
-                            TitleInfo.m_AADT_Cell_list[i].dwDuration = 0x40;
+                            TitleInfo.m_AADT_Cell_list[i].dwDuration = 0x40;*/
+                        TitleInfo.m_AADT_Cell_list[i].dwDuration = TimeSpan.Zero;
                     } else
                     {
-                        TitleInfo.m_AADT_Cell_list[i].dwDuration = 0xC0; // Default to NTSC
+                        //TitleInfo.m_AADT_Cell_list[i].dwDuration = 0xC0; // Default to NTSC
+                        TitleInfo.m_AADT_Cell_list[i].dwDuration = TimeSpan.Zero;
                     }
                 }
             }
@@ -513,12 +519,12 @@ namespace PgcDemuxCS
                 {
                     for (k = 0; k < MenuInfo.m_nCells[j]; k++)
                     {
-                        VIDa = MenuInfo.m_C_POST[j][k].vob_id_nr;
-                        CIDa = MenuInfo.m_C_POST[j][k].cell_nr;
+                        VIDa = MenuInfo.m_C_POST[j][k].VobID;
+                        CIDa = MenuInfo.m_C_POST[j][k].CellID;
                         if (VIDa == VIDb && CIDa == CIDb)
                         {
                             bFound = true;
-                            MenuInfo.m_AADT_Cell_list[i].dwDuration = (ulong)MenuInfo.m_C_PBKT[j][k].playback_time.Raw;
+                            MenuInfo.m_AADT_Cell_list[i].dwDuration = MenuInfo.m_C_PBKT[j][k].PlaybackTime;
                         }
                     }
                 }
@@ -526,10 +532,11 @@ namespace PgcDemuxCS
                 {
                     iVideoAttr = ifo.MenuVobVideoAttributes;
                     iFormat = iVideoAttr.video_format;
-                    if (iFormat == 0) // NTSC
+                    /*if (iFormat == 0) // NTSC
                         MenuInfo.m_AADT_Cell_list[i].dwDuration = 0xC0;
                     else // PAL
-                        MenuInfo.m_AADT_Cell_list[i].dwDuration = 0x40;
+                        MenuInfo.m_AADT_Cell_list[i].dwDuration = 0x40;*/
+                    MenuInfo.m_AADT_Cell_list[i].dwDuration = TimeSpan.Zero;
                 }
             }
         }

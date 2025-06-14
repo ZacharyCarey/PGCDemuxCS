@@ -5,6 +5,6 @@ namespace PgcDemuxCS
         public int VID;
         public int iSize;
         public int nCells;
-        public ulong dwDuration;
+        public TimeSpan dwDuration;
     }
 }

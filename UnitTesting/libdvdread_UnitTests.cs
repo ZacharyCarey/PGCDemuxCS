@@ -60,10 +60,10 @@ namespace UnitTesting
             var video_attr = vts_ifo.TitlesVobVideoAttributes;
             var vts_id = vts_ifo.ID;
             
-            var pgc = vts_pgcit[vts_ifo.TitlesAndChapters[title.vts_ttn - 1][0].ProgramChainNumber - 1].pgc;
+            var pgc = vts_pgcit[vts_ifo.TitlesAndChapters[title.vts_ttn - 1][0].ProgramChainNumber - 1].Pgc;
 
             var chapter_count_reported = title.nr_of_ptts;
-            if (pgc.cell_playback == null || pgc.program_map == null)
+            if (pgc.CellPlayback == null || pgc.ProgramMap == null)
             {
                 Assert.AreEqual(0, expected.Length);
                 Assert.AreEqual(0, expected.Chapters.Count);
@@ -74,10 +74,10 @@ namespace UnitTesting
             }
             else
             {
-                Assert.AreEqual(expected.Length, dvdtime2msec(pgc.playback_time) / 1000.0, 0.001, "Track length did not match");
+                Assert.AreEqual(expected.Length, pgc.PlaybackTime.TotalSeconds, 0.002, "Track length did not match");
                 Assert.AreEqual(expected.VtsID, vts_id, "Vts ID did not match");
                 Assert.AreEqual(expected.VTS, Array.IndexOf(ifo, vts_ifo), "VTS number did not match");
-                Assert.AreEqual(expected.FPS, frames_per_s[(pgc.playback_time.frame_u & 0xC0) >> 6], 0.01, "FPS did not match");
+                Assert.AreEqual(expected.FPS, pgc.PlaybackFPS, 0.01, "FPS did not match");
                 Assert.AreEqual(expected.Format, GetFormat(vts_ifo.TitlesVobVideoAttributes), "Video format did not match");
                 Assert.AreEqual(expected.Aspect, GetAspect(vts_ifo.TitlesVobVideoAttributes), "Video aspect ratio did not match");
                 Assert.AreEqual(expected.Width, GetSize(vts_ifo.TitlesVobVideoAttributes).Width, "Video width did not match");
@@ -100,45 +100,45 @@ namespace UnitTesting
 
                 // chapters
                 int icell = 0;
-                for (int i = 0; i < pgc.nr_of_programs; i++)
+                for (int i = 0; i < pgc.NumberOfPrograms; i++)
                 {
-                    int ms = 0;
+                    TimeSpan duration = TimeSpan.Zero;
                     int next;
-                    if (i == pgc.nr_of_programs - 1) next = pgc.nr_of_cells + 1;
-                    else next = pgc.program_map[i + 1];
+                    if (i == pgc.ProgramMap.Length - 1) next = pgc.CellPlayback.Length + 1;
+                    else next = pgc.ProgramMap[i + 1];
 
                     playback_time_t time = new();
                     while (icell < next - 1)
                     {
-                        ms += (int)dvdtime2msec(pgc.cell_playback[icell].playback_time);
+                        duration += pgc.CellPlayback[icell].PlaybackTime;
                         //converttime(ref time, pgc.cell_playback[icell].playback_time);
                         icell++;
                     }
 
                     var expectedChapter = expected.Chapters.Where(x => x.Index - 1 == i).First();
-                    Assert.AreEqual(expectedChapter.StartCell, pgc.program_map[i]);
-                    Assert.AreEqual(expectedChapter.Length, ms * 0.001, 0.001);
+                    Assert.AreEqual(expectedChapter.StartCell, pgc.ProgramMap[i]);
+                    Assert.AreEqual(expectedChapter.Length, duration.TotalSeconds, 0.002);
                 }
 
                 // cells
-                for (int i = 0; i < pgc.nr_of_cells; i++)
+                for (int i = 0; i < pgc.NumberOfCells; i++)
                 {
-                    var cell_length = dvdtime2msec(pgc.cell_playback[i].playback_time) / 1000.0;
+                    var cell_length = pgc.CellPlayback[i].PlaybackTime;
                     //converttime(&dvd_info.titles[j].cells[i].playback_time, &pgc->cell_playback[i].playback_time);
                     /* added to get the start/end sectors */
-                    var first_sector = pgc.cell_playback[i].first_sector;
-                    var last_sector = pgc.cell_playback[i].last_sector;
+                    var first_sector = pgc.CellPlayback[i].FirstSector;
+                    var last_sector = pgc.CellPlayback[i].LastSector;
                     var expectedCell = expected.Cells.First(x => x.Index - 1 == i);
-                    Assert.AreEqual(expectedCell.Length, cell_length, 0.001);
+                    Assert.AreEqual(expectedCell.Length, cell_length.TotalSeconds, 0.002);
                     Assert.AreEqual((uint)expectedCell.FirstSector, first_sector);
                     Assert.AreEqual((uint)expectedCell.LastSector, last_sector);
                 }
 
                 // subtitles
-                int subcount = pgc.subp_control.Length;
+                int subcount = pgc.SubpictureStreams.Length;
                 for (int i = 0, k = 0; i < subcount; i++)
                 {
-                    if ((pgc.subp_control[k] & 0x80000000) == 0)
+                    if (!pgc.SubpictureStreams[k].Available)
                         continue;
                     var subp_attr = vts_ifo.TitlesVobSubpictureAttributes[i];
 
@@ -190,7 +190,7 @@ namespace UnitTesting
         }
         private static string GetFormat(video_attr_t attr)
         {
-            switch(attr.video_format)
+            switch (attr.video_format)
             {
                 case 0: return "NTSC";
                 case 1: return "PAL";
@@ -276,11 +276,11 @@ namespace UnitTesting
             }
         }
         private static uint[] audio_id = { 0x80, 0, 0xC0, 0xC0, 0xA0, 0, 0x88 };
-        private static audio_attr_t FindAudioStream(AudioTrack track, VtsIfo vts, pgc_t pgc, title_info_t title, out string streamID)
+        private static audio_attr_t FindAudioStream(AudioTrack track, VtsIfo vts, PGC pgc, title_info_t title, out string streamID)
         {
-            for (int i = 0; i < pgc.audio_control.Length; i++)
+            for (int i = 0; i < pgc.AudioStreams.Length; i++)
             {
-                if ((pgc.audio_control[i] & 0x8000) == 0)
+                if (!pgc.AudioStreams[i].Available)
                 {
                     continue;
                 }
