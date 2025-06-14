@@ -48,7 +48,7 @@ namespace PgcDemuxCS.DVD
         public readonly VobuAddressMap? MenuVobuAddressMap = null;
         public readonly VideoAttributes MenuVobVideoAttributes;
         public readonly AudioAttributes? MenuVobAudioAttributes = null;
-        public readonly subp_attr_t? MenuSubpictureAttributes = null;
+        public readonly SubpictureAttributes? MenuSubpictureAttributes = null;
 
         public abstract MenuProgramChainLanguageUnitTable? MenuProgramChainTable { get; }
 
@@ -119,7 +119,7 @@ namespace PgcDemuxCS.DVD
             }
             else
             {
-                MenuSubpictureAttributes = new subp_attr_t(file);
+                MenuSubpictureAttributes = new SubpictureAttributes(file);
             }
 
             file.ReadZeros(164);

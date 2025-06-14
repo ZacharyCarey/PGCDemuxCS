@@ -21,7 +21,7 @@ namespace PgcDemuxCS.DVD
         public readonly VobuAddressMap? TitleVobuAddressMap = null; 
         public readonly VideoAttributes TitlesVobVideoAttributes; 
         public readonly AudioAttributes[] TitlesVobAudioAttributes; 
-        public readonly subp_attr_t[] TitlesVobSubpictureAttributes; 
+        public readonly SubpictureAttributes[] TitlesVobSubpictureAttributes; 
         public readonly multichannel_ext_t[] MultichannelExtensions = new multichannel_ext_t[8];
 
         private VtsIfo(Stream file) : base(file)
@@ -83,8 +83,8 @@ namespace PgcDemuxCS.DVD
 
             ushort numSubpStreams = file.Read<ushort>();
             DvdUtils.CHECK_VALUE(numSubpStreams <= 32);
-            TitlesVobSubpictureAttributes = new subp_attr_t[numSubpStreams];
-            file.Read<subp_attr_t>(TitlesVobSubpictureAttributes);
+            TitlesVobSubpictureAttributes = new SubpictureAttributes[numSubpStreams];
+            file.Read<SubpictureAttributes>(TitlesVobSubpictureAttributes);
             file.ReadZeros((32 - (int)numSubpStreams) * 6);
 
             file.ReadZeros(2);

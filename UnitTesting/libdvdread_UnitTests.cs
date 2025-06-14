@@ -144,7 +144,7 @@ namespace UnitTesting
                     var subp_attr = vts_ifo.TitlesVobSubpictureAttributes[i];
 
                     var subp = expected.Subpictures.First(x => x.Index - 1 == k);
-                    Assert.AreEqual(subp.LanguageCode, string.IsNullOrWhiteSpace(subp_attr.lang_code) ? "xx" : subp_attr.lang_code);
+                    Assert.AreEqual(subp.LanguageCode, string.IsNullOrWhiteSpace(subp_attr.LanguageCode) ? "xx" : subp_attr.LanguageCode);
                     Assert.AreEqual(subp.StreamID, $"0x{(0x20 + i):X2}");
                     k++;
                 }
