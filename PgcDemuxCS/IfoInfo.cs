@@ -45,7 +45,7 @@ namespace PgcDemuxCS
         public bool m_bVMGM;
 
         public CellAddressTable? m_iVTS_C_ADT;
-        public pgci_ut_t m_iVTSM_PGCI;
+        public MenuProgramChainLanguageUnitTable m_iVTSM_PGCI;
         public CellAddressTable m_iVTSM_C_ADT;
 
         public readonly int[] m_nAngles = new int[MAX_PGC];
@@ -180,7 +180,7 @@ namespace PgcDemuxCS
             if (m_iVTSM_PGCI == null)
                 m_nLUs = 0;
             else
-                m_nLUs = m_iVTSM_PGCI.nr_of_lus;
+                m_nLUs = m_iVTSM_PGCI.Count;
 
             MenuInfo.m_nPGCs = 0;
             if (m_nLUs > MAX_LU)
@@ -192,7 +192,7 @@ namespace PgcDemuxCS
 
             for (nLU = 0; nLU < m_nLUs; nLU++)
             {
-                m_iVTSM_LU[nLU] = m_iVTSM_PGCI.lu[nLU].pgcit;
+                m_iVTSM_LU[nLU] = m_iVTSM_PGCI[nLU].PgcTable;
                 m_nPGCinLU[nLU] = m_iVTSM_LU[nLU].Count;
                 m_nIniPGCinLU[nLU] = MenuInfo.m_nPGCs;
 
@@ -467,8 +467,7 @@ namespace PgcDemuxCS
             int i, j, k;
             int VIDa, CIDa, VIDb, CIDb;
             bool bFound;
-            video_attr_t iVideoAttr;
-            int iFormat;
+            VideoAttributes iVideoAttr;
 
 
             iArraysize = TitleInfo.m_AADT_Cell_list.GetSize();
@@ -495,7 +494,6 @@ namespace PgcDemuxCS
                     if (ifo is VtsIfo vts)
                     {
                         iVideoAttr = vts.TitlesVobVideoAttributes;
-                        iFormat = iVideoAttr.video_format;
                         /*if (iFormat == 0) // NTSC
                             TitleInfo.m_AADT_Cell_list[i].dwDuration = 0xC0;
                         else // PAL
@@ -531,7 +529,6 @@ namespace PgcDemuxCS
                 if (!bFound)
                 {
                     iVideoAttr = ifo.MenuVobVideoAttributes;
-                    iFormat = iVideoAttr.video_format;
                     /*if (iFormat == 0) // NTSC
                         MenuInfo.m_AADT_Cell_list[i].dwDuration = 0xC0;
                     else // PAL

@@ -15,11 +15,11 @@ namespace PgcDemuxCS.DVD
         public readonly uint TitleVobStartSector;
         public readonly PartOfTitleSearchPointerTable? TitlesAndChapters = null;
         public readonly ProgamChainInformationTable? TitleProgramChainTable = null;
-        public override pgci_ut_t? MenuProgramChainTable { get; } = null; 
+        public override MenuProgramChainLanguageUnitTable? MenuProgramChainTable { get; } = null; 
         public readonly vts_tmapt_t? TimeMap = null; 
         public readonly CellAddressTable? TitleCellAddressTable = null;
         public readonly vobu_admap_t? TitleVobuAddressMap = null; 
-        public readonly video_attr_t TitlesVobVideoAttributes; 
+        public readonly VideoAttributes TitlesVobVideoAttributes; 
         public readonly audio_attr_t[] TitlesVobAudioAttributes; 
         public readonly subp_attr_t[] TitlesVobSubpictureAttributes; 
         public readonly multichannel_ext_t[] MultichannelExtensions = new multichannel_ext_t[8];
@@ -53,7 +53,7 @@ namespace PgcDemuxCS.DVD
             file.Seek(0xD0, SeekOrigin.Begin);
             uint menuPgcSector = file.Read<uint>();
             DvdUtils.CHECK_VALUE(menuPgcSector <= LastIFOSector);
-            if (menuPgcSector != 0) MenuProgramChainTable = new pgci_ut_t(file, menuPgcSector * DvdUtils.DVD_BLOCK_LEN);
+            if (menuPgcSector != 0) MenuProgramChainTable = new MenuProgramChainLanguageUnitTable(file, menuPgcSector * DvdUtils.DVD_BLOCK_LEN);
 
             file.Seek(0xD4, SeekOrigin.Begin);
             uint timeMapSector = file.Read<uint>();
@@ -71,7 +71,7 @@ namespace PgcDemuxCS.DVD
             if (vobuSector != 0) TitleVobuAddressMap = new vobu_admap_t(file, vobuSector *  DvdUtils.DVD_BLOCK_LEN);
 
             file.Seek(0x200, SeekOrigin.Begin);
-            TitlesVobVideoAttributes = new video_attr_t(file);
+            TitlesVobVideoAttributes = new VideoAttributes(file);
 
             ushort numAudioStreams = file.Read<ushort>();
             DvdUtils.CHECK_VALUE(numAudioStreams <= 8);

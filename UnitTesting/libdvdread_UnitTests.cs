@@ -31,6 +31,7 @@ namespace UnitTesting
             DiscReader discReader = new DiscReader(Path.Combine(DvdBackupPath, $"{DvdName}.iso"));
             VtsIfo[] ifo = new VtsIfo[100];
             VmgIfo vmg = VmgIfo.Open(discReader);
+            Console.WriteLine(vmg?.TextData?.DiscName);
             Assert.IsNotNull(vmg, "Failed to load VMG IFO");
             for (int i = 1; i <= 99; i++)
             {
@@ -80,8 +81,8 @@ namespace UnitTesting
                 Assert.AreEqual(expected.FPS, pgc.PlaybackFPS, 0.01, "FPS did not match");
                 Assert.AreEqual(expected.Format, GetFormat(vts_ifo.TitlesVobVideoAttributes), "Video format did not match");
                 Assert.AreEqual(expected.Aspect, GetAspect(vts_ifo.TitlesVobVideoAttributes), "Video aspect ratio did not match");
-                Assert.AreEqual(expected.Width, GetSize(vts_ifo.TitlesVobVideoAttributes).Width, "Video width did not match");
-                Assert.AreEqual(expected.Height, GetSize(vts_ifo.TitlesVobVideoAttributes).Height, "Video height did not match");
+                Assert.AreEqual(expected.Width, vts_ifo.TitlesVobVideoAttributes.Size.Width, "Video width did not match");
+                Assert.AreEqual(expected.Height, vts_ifo.TitlesVobVideoAttributes.Size.Height, "Video height did not match");
                 //Assert.AreEqual(expected.DF, vts_ifo.vtsi_mat.vts_video_attr.);
                 Assert.AreEqual(expected.Angles, title.NumberOfAngles, "Number of angles did not match");
 
@@ -176,52 +177,21 @@ namespace UnitTesting
         }
 
         private static double[] frames_per_s = { -1.0, 25.00, -1.0, 29.97 };
-        private static string GetFormat(video_attr_t attr)
+        private static string GetFormat(VideoAttributes attr)
         {
-            switch (attr.video_format)
+            switch (attr.Region)
             {
-                case 0: return "NTSC";
-                case 1: return "PAL";
+                case RegionStandard.NTSC: return "NTSC";
+                case RegionStandard.PAL: return "PAL";
                 default: return null;
             }
         }
-        private static string GetAspect(video_attr_t attr) {
-            switch(attr.display_aspect_ratio)
+        private static string GetAspect(VideoAttributes attr) {
+            switch(attr.DisplayAspectRatio)
             {
-                case 0: return "4/3";
-                case 3: return "16/9";
+                case AspectRatio.Fullscreen: return "4/3";
+                case AspectRatio.WideScreen: return "16/9";
                 default: return null;
-            }
-        }
-        private static Size GetSize(video_attr_t attr) {
-            if (GetFormat(attr) == "NTSC")
-            {
-                switch(attr.picture_size)
-                {
-                    case 0: return new Size(720, 480);
-                    case 1: return new Size(704, 480);
-                    case 2: return new Size(352, 480);
-                    case 3: return new Size(352, 240);
-                    default: 
-                        Assert.Fail("Invalid picture size.");
-                        return new();
-                }
-            }else if (GetFormat(attr) == "PAL")
-            {
-                switch (attr.picture_size)
-                {
-                    case 0: return new Size(720, 576);
-                    case 1: return new Size(704, 576);
-                    case 2: return new Size(352, 576);
-                    case 3: return new Size(352, 288);
-                    default:
-                        Assert.Fail("Invalid picture size.");
-                        return new();
-                }
-            } else
-            {
-                Assert.Fail("Invalid region");
-                return new();
             }
         }
         private static string GetFormat(audio_attr_t attr)

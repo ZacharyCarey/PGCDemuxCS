@@ -1,49 +1,60 @@
+using System.Collections;
 
 namespace PgcDemuxCS.DVD.IfoTypes.VMGI
 {
     /// <summary>
     /// Parental management information table <see cref="http://www.mpucoder.com/DVD/ifo_vmg.html#mait"/>
     /// </summary>
-    public class ptl_mait_t
+    public class ParentalManagementInfoTable : IEnumerable<ParentalManagementInfo>
     {
-        public const uint Size = 8;
-        public const uint PTL_MAIT_NUM_LEVEL = 8;
+        internal const uint Size = 8;
+        internal const uint PTL_MAIT_NUM_LEVEL = 8;
 
-        public ushort nr_of_countries;
-        public ushort nr_of_vtss;
-        public uint last_byte;
-        public ptl_mait_country_t[] countries = Array.Empty<ptl_mait_country_t>();
+        private ParentalManagementInfo[] countries;
+        public int Count => countries.Length;
 
-        internal ptl_mait_t(Stream file, uint offset)
+        public ParentalManagementInfo this[int index] => countries[index];
+
+        IEnumerator<ParentalManagementInfo> IEnumerable<ParentalManagementInfo>.GetEnumerator()
+        {
+            return ((IEnumerable<ParentalManagementInfo>)countries).GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return countries.GetEnumerator();
+        }
+
+        internal ParentalManagementInfoTable(Stream file, uint offset)
         {
             file.Seek(offset, SeekOrigin.Begin);
 
             // Read data
-            nr_of_countries = file.Read<ushort>();
-            nr_of_vtss = file.Read<ushort>();
-            last_byte = file.Read<uint>();
+            ushort nr_of_countries = file.Read<ushort>();
+            ushort nr_of_vtss = file.Read<ushort>();
+            uint last_byte = file.Read<uint>();
 
             // Verify
             DvdUtils.CHECK_VALUE(nr_of_countries != 0);
             DvdUtils.CHECK_VALUE(nr_of_countries < 100); /* ?? */
             DvdUtils.CHECK_VALUE(nr_of_vtss != 0);
             DvdUtils.CHECK_VALUE(nr_of_vtss < 100); /* ?? */
-            DvdUtils.CHECK_VALUE(nr_of_countries * ptl_mait_country_t.Size <= last_byte + 1 - ptl_mait_t.Size);
+            DvdUtils.CHECK_VALUE(nr_of_countries * ParentalManagementInfo.Size <= last_byte + 1 - ParentalManagementInfoTable.Size);
 
             // Parse countries
-            countries = new ptl_mait_country_t[nr_of_countries];
+            countries = new ParentalManagementInfo[nr_of_countries];
             for (int i = 0; i < countries.Length; i++)
             {
-                countries[i] = new ptl_mait_country_t(file, nr_of_vtss, last_byte, offset);
+                countries[i] = new ParentalManagementInfo(file, nr_of_vtss, last_byte, offset);
             }
 
             // Parse pf_ptl_mai data
-            Parse_pf_ptl_mai(file, offset);
+            Parse_pf_ptl_mai(file, offset, nr_of_vtss);
         }
 
-        private void Parse_pf_ptl_mai(Stream file, uint offset)
+        private void Parse_pf_ptl_mai(Stream file, uint offset, int nr_of_vtss)
         {
-            for (int i = 0; i < nr_of_countries; i++)
+            for (int i = 0; i < Count; i++)
             {
                 file.Seek(offset + countries[i].pf_ptl_mai_start_byte, SeekOrigin.Begin);
                 ushort[] pf_temp = new ushort[(nr_of_vtss + 1) * 8];

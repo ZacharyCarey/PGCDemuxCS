@@ -3,41 +3,34 @@ namespace PgcDemuxCS.DVD.IfoTypes.VMGI
 {
     /// <summary>
     /// Video Title Set Attribute Table <see cref="http://www.mpucoder.com/DVD/ifo_vmg.html#atrt"/>
+    /// Supposedly just copies of VTS attributes, not sure if it is usefull
     /// </summary>
-    public class vts_atrt_t
+    public class VtsAttributeTable
     {
-        public const uint Size = 8;
+        internal const uint Size = 8;
 
-        public ushort nr_of_vtss;
-        public ushort zero_1;
-        public uint last_byte;
+        public ushort NumberOfVTSs;
         //public vts_attributes_t[] vts;
 
-        /// <summary>
-        /// Offsets table for each vts_attributes
-        /// </summary>
-        uint[] vts_atrt_offsets;
-
-        internal vts_atrt_t(Stream file, uint offset)
+        internal VtsAttributeTable(Stream file, uint offset)
         {
             file.Seek(offset, SeekOrigin.Begin);
 
             // Read data
-            nr_of_vtss = file.Read<ushort>();
-            zero_1 = file.Read<ushort>();
-            last_byte = file.Read<uint>();
+            NumberOfVTSs = file.Read<ushort>();
+            file.ReadZeros(2);
+            uint last_byte = file.Read<uint>();
 
             // Verify
-            DvdUtils.CHECK_ZERO(zero_1);
-            DvdUtils.CHECK_VALUE(nr_of_vtss != 0);
-            DvdUtils.CHECK_VALUE(nr_of_vtss < 100); /* ?? */
-            DvdUtils.CHECK_VALUE((uint)nr_of_vtss * (4 + vts_attributes_t.MIN_SIZE) + vts_atrt_t.Size < last_byte + 1);
+            DvdUtils.CHECK_VALUE(NumberOfVTSs != 0);
+            DvdUtils.CHECK_VALUE(NumberOfVTSs < 100); /* ?? */
+            DvdUtils.CHECK_VALUE((uint)NumberOfVTSs * (4 + vts_attributes_t.MIN_SIZE) + VtsAttributeTable.Size < last_byte + 1);
 
-            // Read additional data
-            vts_atrt_offsets = new uint[nr_of_vtss];
+            // Offsets table for each vts_attributes
+            uint[] vts_atrt_offsets = new uint[NumberOfVTSs];
             file.Read(vts_atrt_offsets);
 
-            for (int i = 0; i < nr_of_vtss; i++)
+            for (int i = 0; i < NumberOfVTSs; i++)
             {
                 DvdUtils.CHECK_VALUE(vts_atrt_offsets[i] + vts_attributes_t.MIN_SIZE < last_byte + 1); // Verify
             }

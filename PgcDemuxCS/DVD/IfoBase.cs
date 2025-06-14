@@ -46,11 +46,11 @@ namespace PgcDemuxCS.DVD
         public readonly uint MenuVobStartSector;
         public readonly CellAddressTable? MenuCellAddressTable = null;
         public readonly vobu_admap_t? MenuVobuAddressMap = null;
-        public readonly video_attr_t MenuVobVideoAttributes;
+        public readonly VideoAttributes MenuVobVideoAttributes;
         public readonly audio_attr_t? MenuVobAudioAttributes = null;
         public readonly subp_attr_t? MenuSubpictureAttributes = null;
 
-        public abstract pgci_ut_t? MenuProgramChainTable { get; }
+        public abstract MenuProgramChainLanguageUnitTable? MenuProgramChainTable { get; }
 
         protected IfoBase(Stream file)
         {
@@ -96,7 +96,7 @@ namespace PgcDemuxCS.DVD
 
             file.Seek(0xE8, SeekOrigin.Begin);
             file.ReadZeros(24);
-            MenuVobVideoAttributes = new video_attr_t(file);
+            MenuVobVideoAttributes = new VideoAttributes(file);
 
             ushort numAudioStreams = file.Read<ushort>();
             DvdUtils.CHECK_VALUE(numAudioStreams <= 1);

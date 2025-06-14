@@ -39,10 +39,10 @@ namespace PgcDemuxCS.DVD
 
         public readonly PGC? FirstPlayPGC = null;
         public readonly ChapterSearchPointerTable? Chapters = null; 
-        public override pgci_ut_t? MenuProgramChainTable { get; } = null;
-        public readonly ptl_mait_t? ParentalManagementMasks = null;
-        public readonly vts_atrt_t? VtsStreamAttributes = null;
-        public readonly txtdt_mgi_t? TextData = null;
+        public override MenuProgramChainLanguageUnitTable? MenuProgramChainTable { get; } = null;
+        public readonly ParentalManagementInfoTable? ParentalManagementMasks = null;
+        public readonly VtsAttributeTable? VtsStreamAttributes = null;
+        public readonly TextDataManagerInfo? TextData = null;
 
         private VmgIfo(Stream file) : base(file)
         {
@@ -76,22 +76,22 @@ namespace PgcDemuxCS.DVD
             file.Seek(0xC8, SeekOrigin.Begin);
             uint menuPGCSector = file.Read<uint>();
             DvdUtils.CHECK_VALUE(menuPGCSector <= LastIFOSector);
-            if (menuPGCSector != 0) MenuProgramChainTable = new pgci_ut_t(file, menuPGCSector * DvdUtils.DVD_BLOCK_LEN);
+            if (menuPGCSector != 0) MenuProgramChainTable = new MenuProgramChainLanguageUnitTable(file, menuPGCSector * DvdUtils.DVD_BLOCK_LEN);
 
             file.Seek(0xCC, SeekOrigin.Begin);
             uint ptlSector = file.Read<uint>();
             DvdUtils.CHECK_VALUE(ptlSector <= LastIFOSector);
-            if (ptlSector != 0) ParentalManagementMasks = new ptl_mait_t(file, ptlSector * DvdUtils.DVD_BLOCK_LEN);
+            if (ptlSector != 0) ParentalManagementMasks = new ParentalManagementInfoTable(file, ptlSector * DvdUtils.DVD_BLOCK_LEN);
 
             file.Seek(0xD0, SeekOrigin.Begin);
             uint vtsAttrSector = file.Read<uint>();
             DvdUtils.CHECK_VALUE(vtsAttrSector <= LastIFOSector);
-            if (vtsAttrSector != 0) VtsStreamAttributes = new vts_atrt_t(file, vtsAttrSector * DvdUtils.DVD_BLOCK_LEN);
+            if (vtsAttrSector != 0) VtsStreamAttributes = new VtsAttributeTable(file, vtsAttrSector * DvdUtils.DVD_BLOCK_LEN);
 
             file.Seek(0xD4, SeekOrigin.Begin);
             uint textDataSector = file.Read<uint>();
             DvdUtils.CHECK_VALUE(textDataSector <= LastIFOSector);
-            if (textDataSector != 0) TextData = new txtdt_mgi_t(file, textDataSector * DvdUtils.DVD_BLOCK_LEN);
+            if (textDataSector != 0) TextData = new TextDataManagerInfo(file, textDataSector * DvdUtils.DVD_BLOCK_LEN);
 
             file.Seek(0xE0, SeekOrigin.Begin);
             file.ReadZeros(8);
