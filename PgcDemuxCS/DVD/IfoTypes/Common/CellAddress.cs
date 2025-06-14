@@ -29,16 +29,9 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
             DvdUtils.CHECK_VALUE(StartSector < LastSector);
         }
 
-        static CellAddress? IStreamReadable<CellAddress>.Read(Stream file)
+        static CellAddress? IStreamReadable<CellAddress>.Read(Stream file, int index)
         {
-            try
-            {
-                return new CellAddress(file);
-            }
-            catch (Exception)
-            {
-                return null;
-            }
+            return new CellAddress(file);
         }
 
     }

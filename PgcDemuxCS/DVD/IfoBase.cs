@@ -45,9 +45,9 @@ namespace PgcDemuxCS.DVD
         /// </summary>
         public readonly uint MenuVobStartSector;
         public readonly CellAddressTable? MenuCellAddressTable = null;
-        public readonly vobu_admap_t? MenuVobuAddressMap = null;
+        public readonly VobuAddressMap? MenuVobuAddressMap = null;
         public readonly VideoAttributes MenuVobVideoAttributes;
-        public readonly audio_attr_t? MenuVobAudioAttributes = null;
+        public readonly AudioAttributes? MenuVobAudioAttributes = null;
         public readonly subp_attr_t? MenuSubpictureAttributes = null;
 
         public abstract MenuProgramChainLanguageUnitTable? MenuProgramChainTable { get; }
@@ -92,7 +92,7 @@ namespace PgcDemuxCS.DVD
             file.Seek(0xDC, SeekOrigin.Begin);
             uint vobuAddressMapSector = file.Read<uint>();
             DvdUtils.CHECK_VALUE(vobuAddressMapSector <= LastIFOSector);
-            if (vobuAddressMapSector != 0) MenuVobuAddressMap = new vobu_admap_t(file, vobuAddressMapSector * DvdUtils.DVD_BLOCK_LEN);
+            if (vobuAddressMapSector != 0) MenuVobuAddressMap = new VobuAddressMap(file, vobuAddressMapSector * DvdUtils.DVD_BLOCK_LEN);
 
             file.Seek(0xE8, SeekOrigin.Begin);
             file.ReadZeros(24);
@@ -106,7 +106,7 @@ namespace PgcDemuxCS.DVD
             }
             else
             {
-                MenuVobAudioAttributes = new audio_attr_t(file);
+                MenuVobAudioAttributes = new AudioAttributes(file, 0);
             }
 
             file.ReadZeros(56 + 16);

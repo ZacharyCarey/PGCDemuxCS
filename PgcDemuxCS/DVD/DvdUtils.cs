@@ -63,7 +63,7 @@ namespace PgcDemuxCS.DVD
         {
             for (int i = 0; i < span.Length; i++)
             {
-                var item = T.Read(stream);
+                var item = T.Read(stream, i);
                 if (item == null) throw new IOException();
                 span[i] = item;
             }
@@ -122,6 +122,6 @@ namespace PgcDemuxCS.DVD
     }
 
     internal interface IStreamReadable<T> {
-        internal static abstract T? Read(Stream file);
+        internal static abstract T? Read(Stream file, int index);
     }
 }

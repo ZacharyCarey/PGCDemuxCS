@@ -40,7 +40,7 @@ namespace PgcDemuxCS.DVD.IfoTypes.VMGI
             // CHECK_VALUE(tt_srpt->title[i].title_set_sector != 0); 
         }
 
-        static ChapterInfo? IStreamReadable<ChapterInfo>.Read(Stream file)
+        static ChapterInfo? IStreamReadable<ChapterInfo>.Read(Stream file, int index)
         {
             return new ChapterInfo(file);
         }

@@ -71,16 +71,10 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
             DvdUtils.CHECK_ZERO(zero6);
         }
 
-        static multichannel_ext_t? IStreamReadable<multichannel_ext_t>.Read(Stream file)
+        static multichannel_ext_t? IStreamReadable<multichannel_ext_t>.Read(Stream file, int index)
         {
-            try
-            {
-                return new multichannel_ext_t(file);
-            }
-            catch (Exception)
-            {
-                return null;
-            }
+
+            return new multichannel_ext_t(file);
         }
     }
 }

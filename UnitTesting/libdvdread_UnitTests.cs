@@ -90,12 +90,12 @@ namespace UnitTesting
                 {
                     string streamID;
                     var stream = FindAudioStream(audio, vts_ifo, pgc, title, out streamID);
-                    Assert.AreEqual(audio.LanguageCode, (stream.lang_type == 1) ? stream.lang_code : "un", "Language did not match");
+                    Assert.AreEqual(audio.LanguageCode, stream.LanguageCode, "Language did not match");
                     Assert.AreEqual(audio.Format, GetFormat(stream), "Audio format did not match");
                     Assert.AreEqual(audio.Frequency, (uint)GetFrequency(stream), "Audio frequency did not match");
                     Assert.AreEqual(audio.Quantization, GetQuantization(stream), "Audio quantization did not match");
-                    Assert.AreEqual(audio.Channels, stream.channels + 1, "Audio channels did not match");
-                    Assert.AreEqual(audio.ApMode, stream.application_mode, "Audio app mode did not match");
+                    Assert.AreEqual(audio.Channels, stream.Channels, "Audio channels did not match");
+                    Assert.AreEqual(audio.ApMode, (int)stream.Mode, "Audio app mode did not match");
                     Assert.AreEqual(audio.StreamID, streamID, "Stream ID did not match");
                 }
 
@@ -194,47 +194,40 @@ namespace UnitTesting
                 default: return null;
             }
         }
-        private static string GetFormat(audio_attr_t attr)
+        private static string GetFormat(AudioAttributes attr)
         {
-            switch(attr.audio_format)
+            switch(attr.Format)
             {
-                case 0: return "ac3";
-                case 2: return "mpeg1";
-                case 3: return "mpeg2";
-                case 4: return "lpcm";
-                case 5: return "sdds"; // todo: confirm
-                case 6: return "dts";
+                case AudioEncoding.AC3: return "ac3";
+                case AudioEncoding.Mpeg1: return "mpeg1";
+                case AudioEncoding.Mpeg2: return "mpeg2";
+                case AudioEncoding.LPCM: return "lpcm";
+                case AudioEncoding.SDDS: return "sdds"; // todo: confirm
+                case AudioEncoding.DTS: return "dts";
                 default:
                     Assert.Fail("Invalid audio format");
                     return null;
             }
         }
-        private static int GetFrequency(audio_attr_t attr)
+        private static int GetFrequency(AudioAttributes attr)
         {
-            switch(attr.sample_frequency)
-            {
-                case 0: return 48000;
-                case 1: return 96000;
-                default:
-                    Assert.Fail("Invalid sample frequency");
-                    return 0;
-            }
+            return attr.SampleFrequency;
         }
-        private static string GetQuantization(audio_attr_t attr)
+        private static string GetQuantization(AudioAttributes attr)
         {
-            switch (attr.quantization)
+            switch (attr.Quantization)
             {
-                case 0: return "16bit";
-                case 1: return "20bit";
-                case 2: return "24bit";
-                case 3: return "drc";
+                case QuantizationType._16bps: return "16bit";
+                case QuantizationType._20bps: return "20bit";
+                case QuantizationType._24bps: return "24bit";
+                case QuantizationType.DRC: return "drc";
                 default: 
                     Assert.Fail("Invalid quantization");
                     return null;
             }
         }
         private static uint[] audio_id = { 0x80, 0, 0xC0, 0xC0, 0xA0, 0, 0x88 };
-        private static audio_attr_t FindAudioStream(AudioTrack track, VtsIfo vts, PGC pgc, ChapterInfo title, out string streamID)
+        private static AudioAttributes FindAudioStream(AudioTrack track, VtsIfo vts, PGC pgc, ChapterInfo title, out string streamID)
         {
             for (int i = 0; i < pgc.AudioStreams.Length; i++)
             {
@@ -243,7 +236,7 @@ namespace UnitTesting
                     continue;
                 }
                 var attr = vts.TitlesVobAudioAttributes[i];
-                streamID = $"0x{(audio_id[attr.audio_format] + i):X2}";
+                streamID = $"0x{(audio_id[(byte)attr.Format] + i):X2}";
                 if (streamID == track.StreamID)
                 {
                     return attr;

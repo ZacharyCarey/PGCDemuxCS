@@ -52,16 +52,9 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
             code_extension = bits.ReadBits<byte>(8);
         }
 
-        static subp_attr_t? IStreamReadable<subp_attr_t>.Read(Stream file)
+        static subp_attr_t? IStreamReadable<subp_attr_t>.Read(Stream file, int index)
         {
-            try
-            {
-                return new subp_attr_t(file);
-            }
-            catch (Exception)
-            {
-                return null;
-            }
+            return new subp_attr_t(file);
         }
     }
 }

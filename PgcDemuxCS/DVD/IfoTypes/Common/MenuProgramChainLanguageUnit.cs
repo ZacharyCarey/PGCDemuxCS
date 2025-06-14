@@ -37,7 +37,7 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
             DvdUtils.CHECK_VALUE((MenuExistenceFlag & 0x07) == 0);
         }
 
-        static MenuProgramChainLanguageUnit? IStreamReadable<MenuProgramChainLanguageUnit>.Read(Stream file)
+        static MenuProgramChainLanguageUnit? IStreamReadable<MenuProgramChainLanguageUnit>.Read(Stream file, int index)
         {
             return new MenuProgramChainLanguageUnit(file);
         }

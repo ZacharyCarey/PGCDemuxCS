@@ -18,9 +18,9 @@ namespace PgcDemuxCS.DVD
         public override MenuProgramChainLanguageUnitTable? MenuProgramChainTable { get; } = null; 
         public readonly vts_tmapt_t? TimeMap = null; 
         public readonly CellAddressTable? TitleCellAddressTable = null;
-        public readonly vobu_admap_t? TitleVobuAddressMap = null; 
+        public readonly VobuAddressMap? TitleVobuAddressMap = null; 
         public readonly VideoAttributes TitlesVobVideoAttributes; 
-        public readonly audio_attr_t[] TitlesVobAudioAttributes; 
+        public readonly AudioAttributes[] TitlesVobAudioAttributes; 
         public readonly subp_attr_t[] TitlesVobSubpictureAttributes; 
         public readonly multichannel_ext_t[] MultichannelExtensions = new multichannel_ext_t[8];
 
@@ -68,15 +68,15 @@ namespace PgcDemuxCS.DVD
             file.Seek(0xE4, SeekOrigin.Begin);
             uint vobuSector = file.Read<uint>();
             DvdUtils.CHECK_VALUE(vobuSector <= LastIFOSector);
-            if (vobuSector != 0) TitleVobuAddressMap = new vobu_admap_t(file, vobuSector *  DvdUtils.DVD_BLOCK_LEN);
+            if (vobuSector != 0) TitleVobuAddressMap = new VobuAddressMap(file, vobuSector *  DvdUtils.DVD_BLOCK_LEN);
 
             file.Seek(0x200, SeekOrigin.Begin);
             TitlesVobVideoAttributes = new VideoAttributes(file);
 
             ushort numAudioStreams = file.Read<ushort>();
             DvdUtils.CHECK_VALUE(numAudioStreams <= 8);
-            TitlesVobAudioAttributes = new audio_attr_t[numAudioStreams];
-            file.Read<audio_attr_t>(TitlesVobAudioAttributes);
+            TitlesVobAudioAttributes = new AudioAttributes[numAudioStreams];
+            file.Read<AudioAttributes>(TitlesVobAudioAttributes);
             file.ReadZeros((8 - (int)numAudioStreams) * 8);
 
             file.ReadZeros(16);

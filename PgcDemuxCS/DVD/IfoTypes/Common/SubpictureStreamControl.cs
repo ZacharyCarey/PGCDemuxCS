@@ -44,7 +44,7 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
             }
         }
 
-        static SubpictureStreamControl IStreamReadable<SubpictureStreamControl>.Read(Stream file)
+        static SubpictureStreamControl IStreamReadable<SubpictureStreamControl>.Read(Stream file, int index)
         {
             return new SubpictureStreamControl(file);
         }

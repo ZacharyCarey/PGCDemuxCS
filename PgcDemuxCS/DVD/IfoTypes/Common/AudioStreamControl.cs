@@ -27,7 +27,7 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
             if (!Available) DvdUtils.CHECK_ZERO(StreamNumber);
         }
 
-        static AudioStreamControl IStreamReadable<AudioStreamControl>.Read(Stream file)
+        static AudioStreamControl IStreamReadable<AudioStreamControl>.Read(Stream file, int index)
         {
             return new AudioStreamControl(file);
         }
