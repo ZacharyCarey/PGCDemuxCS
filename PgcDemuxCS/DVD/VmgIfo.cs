@@ -38,7 +38,7 @@ namespace PgcDemuxCS.DVD
         public readonly ulong VmgPosCode;
 
         public readonly PGC? FirstPlayPGC = null;
-        public readonly tt_srpt_t? Titles = null; 
+        public readonly ChapterSearchPointerTable? Chapters = null; 
         public override pgci_ut_t? MenuProgramChainTable { get; } = null;
         public readonly ptl_mait_t? ParentalManagementMasks = null;
         public readonly vts_atrt_t? VtsStreamAttributes = null;
@@ -71,7 +71,7 @@ namespace PgcDemuxCS.DVD
             file.Seek(0xC4, SeekOrigin.Begin);
             uint tableOfTitlesSector = file.Read<uint>();
             DvdUtils.CHECK_VALUE(tableOfTitlesSector <= LastIFOSector);
-            if (tableOfTitlesSector != 0) Titles = new tt_srpt_t(file, tableOfTitlesSector * DvdUtils.DVD_BLOCK_LEN);
+            if (tableOfTitlesSector != 0) Chapters = new ChapterSearchPointerTable(file, tableOfTitlesSector * DvdUtils.DVD_BLOCK_LEN);
 
             file.Seek(0xC8, SeekOrigin.Begin);
             uint menuPGCSector = file.Read<uint>();

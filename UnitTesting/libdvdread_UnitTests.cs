@@ -15,7 +15,7 @@ namespace UnitTesting
     [TestClass]
     public abstract class libdvdread_UnitTests
     {
-        private const string DvdBackupPath = "D:\\";
+        private const string DvdBackupPath = "C:\\Users\\Zack\\Videos";
         private readonly string DvdName;
         private readonly string InfoFile;
 
@@ -52,7 +52,7 @@ namespace UnitTesting
         private static void VerifyTrack(Track expected, VmgIfo vmg, VtsIfo[] ifo)
         {
             VtsIfo vts_ifo;
-            title_info_t title;
+            ChapterInfo title;
             FindTrack(expected, vmg, ifo, out vts_ifo, out title);
 
             // Verify data
@@ -60,9 +60,9 @@ namespace UnitTesting
             var video_attr = vts_ifo.TitlesVobVideoAttributes;
             var vts_id = vts_ifo.ID;
             
-            var pgc = vts_pgcit[vts_ifo.TitlesAndChapters[title.vts_ttn - 1][0].ProgramChainNumber - 1].Pgc;
+            var pgc = vts_pgcit[vts_ifo.TitlesAndChapters[title.ChapterNumber - 1][0].ProgramChainNumber - 1].Pgc;
 
-            var chapter_count_reported = title.nr_of_ptts;
+            var chapter_count_reported = title.NumberOfChapters;
             if (pgc.CellPlayback == null || pgc.ProgramMap == null)
             {
                 Assert.AreEqual(0, expected.Length);
@@ -83,7 +83,7 @@ namespace UnitTesting
                 Assert.AreEqual(expected.Width, GetSize(vts_ifo.TitlesVobVideoAttributes).Width, "Video width did not match");
                 Assert.AreEqual(expected.Height, GetSize(vts_ifo.TitlesVobVideoAttributes).Height, "Video height did not match");
                 //Assert.AreEqual(expected.DF, vts_ifo.vtsi_mat.vts_video_attr.);
-                Assert.AreEqual(expected.Angles, title.nr_of_angles, "Number of angles did not match");
+                Assert.AreEqual(expected.Angles, title.NumberOfAngles, "Number of angles did not match");
 
                 foreach(var audio in expected.AudioTracks)
                 {
@@ -150,22 +150,22 @@ namespace UnitTesting
             }
         }
 
-        private static void FindTrack(Track track, VmgIfo vmg, VtsIfo[] ifo, out VtsIfo vts, out title_info_t title)
+        private static void FindTrack(Track track, VmgIfo vmg, VtsIfo[] ifo, out VtsIfo vts, out ChapterInfo title)
         {
-            var titles = vmg.Titles.nr_of_srpts;
+            var titles = vmg.Chapters.Count;
 
             for (int j = 0; j < titles; j++)
             {
-                if (ifo[vmg.Titles.title[j].title_set_nr] != null)
+                if (ifo[vmg.Chapters[j].TitleSetNumber] != null)
                 {
-                    var vtsi_mat = ifo[vmg.Titles.title[j].title_set_nr];
-                    var title_set_nr = vmg.Titles.title[j].title_set_nr;
-                    var vts_ttn = vmg.Titles.title[j].vts_ttn;
+                    var vtsi_mat = ifo[vmg.Chapters[j].TitleSetNumber];
+                    var title_set_nr = vmg.Chapters[j].TitleSetNumber;
+                    var vts_ttn = vmg.Chapters[j].ChapterNumber;
 
                     if (title_set_nr == track.VTS && vts_ttn == track.TTN)
                     {
-                        vts = ifo[vmg.Titles.title[j].title_set_nr];
-                        title = vmg.Titles.title[j];
+                        vts = ifo[vmg.Chapters[j].TitleSetNumber];
+                        title = vmg.Chapters[j];
                         return;
                     }
                 }
@@ -264,7 +264,7 @@ namespace UnitTesting
             }
         }
         private static uint[] audio_id = { 0x80, 0, 0xC0, 0xC0, 0xA0, 0, 0x88 };
-        private static audio_attr_t FindAudioStream(AudioTrack track, VtsIfo vts, PGC pgc, title_info_t title, out string streamID)
+        private static audio_attr_t FindAudioStream(AudioTrack track, VtsIfo vts, PGC pgc, ChapterInfo title, out string streamID)
         {
             for (int i = 0; i < pgc.AudioStreams.Length; i++)
             {
