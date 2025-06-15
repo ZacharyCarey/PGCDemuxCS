@@ -90,6 +90,11 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
         /// </summary>
         public readonly uint LastSector;
 
+        public bool IsNormal => BlockType == BlockType.Normal && CellType == AngleBlockType.Normal;
+        public bool IsFirstAngle => BlockType == BlockType.Angle && CellType == AngleBlockType.First;
+        public bool IsMiddleAngle => BlockType == BlockType.Angle && CellType == AngleBlockType.Middle;
+        public bool IsLastAngle => BlockType == BlockType.Angle && CellType == AngleBlockType.Last;
+
         private CellPlaybackInfo(Stream file)
         {
             BitStream bits = new BitStream(file);

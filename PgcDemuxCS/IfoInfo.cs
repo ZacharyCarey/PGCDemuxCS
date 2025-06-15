@@ -154,17 +154,13 @@ namespace PgcDemuxCS
                     for (nCell = 0, bEndAngle = false; nCell < TitleInfo.m_nCells[k] && bEndAngle == false; nCell++)
                     {
                         var cellInfo = vts.TitleProgramChainTable[k].Pgc.CellPlayback[nCell];
-                        bool isFirstAngle = (cellInfo.CellType == AngleBlockType.First && cellInfo.BlockType == BlockType.Angle);
-                        bool isMiddleAngle = (cellInfo.CellType == AngleBlockType.Middle && cellInfo.BlockType == BlockType.Angle);
-                        bool isLastAngle = (cellInfo.CellType == AngleBlockType.Last && cellInfo.BlockType == BlockType.Angle);
-                        bool isNormal = (cellInfo.CellType == AngleBlockType.Normal && cellInfo.BlockType == BlockType.Normal);
 
                         //			0101=First; 1001=Middle ;	1101=Last
-                        if (isFirstAngle)
+                        if (cellInfo.IsFirstAngle)
                             m_nAngles[k] = 1;
-                        else if (isMiddleAngle)
+                        else if (cellInfo.IsMiddleAngle)
                             m_nAngles[k]++;
-                        else if (isLastAngle)
+                        else if (cellInfo.IsLastAngle)
                         {
                             m_nAngles[k]++;
                             bEndAngle = true;

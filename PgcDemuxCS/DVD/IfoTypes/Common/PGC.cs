@@ -41,6 +41,11 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
         public readonly CellPlaybackInfo[] CellPlayback;
         public readonly CellPositionInfo[] CellPosition;
 
+        /// <summary>
+        /// The detected number of angles in this PGC.
+        /// </summary>
+        public readonly uint NumberOfAngles;
+
         internal PGC(Stream file, uint offset)
         {
             file.Seek(offset, SeekOrigin.Begin);
@@ -114,6 +119,22 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
             } else
             {
                 CellPosition = Array.Empty<CellPositionInfo>();
+            }
+
+            // Find all angles
+            NumberOfAngles = 1;
+            for (int cell = 0; cell < NumberOfCells; cell++)
+            {
+                var info = CellPlayback[cell];
+                if (info.IsFirstAngle)
+                    NumberOfAngles = 1;
+                else if (info.IsMiddleAngle)
+                    NumberOfAngles++;
+                else if (info.IsLastAngle)
+                {
+                    NumberOfAngles++;
+                    break;
+                }
             }
         }
     }

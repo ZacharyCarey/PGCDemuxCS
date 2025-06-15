@@ -1256,21 +1256,17 @@ namespace PgcDemuxCS
             {
                 // Check angle info
                 var cellInfo = domainInfo.m_C_PBKT[nPGC][cell.Index];
-                bool isFirstAngle = (cellInfo.CellType == AngleBlockType.First && cellInfo.BlockType == BlockType.Angle);
-                bool isMiddleAngle = (cellInfo.CellType == AngleBlockType.Middle && cellInfo.BlockType == BlockType.Angle);
-                bool isLastAngle = (cellInfo.CellType == AngleBlockType.Last && cellInfo.BlockType == BlockType.Angle);
-                bool isNormal = (cellInfo.CellType == AngleBlockType.Normal && cellInfo.BlockType == BlockType.Normal);
 
-                if (isFirstAngle)
+                if (cellInfo.IsFirstAngle)
                     nCurrAngle = 1;
-                else if ((isMiddleAngle || isLastAngle) && nCurrAngle != 0)
+                else if ((cellInfo.IsMiddleAngle || cellInfo.IsLastAngle) && nCurrAngle != 0)
                     nCurrAngle++;
 
-                if (isNormal || (angle + 1) == nCurrAngle)
+                if (cellInfo.IsNormal || (angle + 1) == nCurrAngle)
                 {
                     yield return cell;
                 }
-                if (isLastAngle) nCurrAngle = 0;
+                if (cellInfo.IsLastAngle) nCurrAngle = 0;
             }
         }
 
