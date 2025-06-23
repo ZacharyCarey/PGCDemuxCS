@@ -14,13 +14,13 @@ namespace PgcDemuxCS
     {
         int currentVBO = -1;
         Stream? currentFile;
-        IfoInfo ifo;
+        IfoData ifo;
         IIfoFileReader FileReader;
         long totalLength;
         long position = 0;
         DomainType domain;
 
-        public VobStream(IfoInfo ifo, IIfoFileReader fileReader, DomainType domain)
+        public VobStream(IfoData ifo, IIfoFileReader fileReader, DomainType domain)
         {
             this.ifo = ifo;
             this.FileReader = fileReader;

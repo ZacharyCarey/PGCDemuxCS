@@ -246,6 +246,20 @@ namespace UnitTesting
             Assert.Fail("Could not find audio stream.");
             throw new Exception();
         }
+
+        /*[TestMethod]
+        public void InfoData()
+        {
+            var reader = new DiscReader(Path.Combine(DvdBackupPath, $"{DvdName}.iso"));
+            var info = PgcDemux.GetIfoInfo(reader, 12);
+            Console.WriteLine($"Menu PGCs: {string.Join(", ", info.MenuPGCs)}");
+            var titlePGCs = info.TitlePGCs.Select(x => $"{x.PGC} ({x.NumberOfAngles} angles)");
+            Console.WriteLine($"Title PGCs: {string.Join(", ", titlePGCs)}");
+            Console.WriteLine($"Menu VIDs: {string.Join(", ", info.MenuVIDs)}");
+            Console.WriteLine($"Title VIDs: {string.Join(", ", info.TitleVIDs)}");
+            Console.WriteLine($"Menu Cells: {string.Join(", ", info.MenuCells)}");
+            Console.WriteLine($"Title Cells: {string.Join(", ", info.TitleCells)}");
+        }*/
     }
 
     [TestClass]

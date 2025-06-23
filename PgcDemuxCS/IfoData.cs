@@ -17,9 +17,9 @@ namespace PgcDemuxCS
         /// </summary>
         public int m_nPGCs;
 
-        public int[] m_nCells = new int[IfoInfo.MAX_PGC];
-        public CellPositionInfo[][] m_C_POST = new CellPositionInfo[IfoInfo.MAX_PGC][];
-        public CellPlaybackInfo[][] m_C_PBKT = new CellPlaybackInfo[IfoInfo.MAX_PGC][];
+        public int[] m_nCells = new int[IfoData.MAX_PGC];
+        public CellPositionInfo[][] m_C_POST = new CellPositionInfo[IfoData.MAX_PGC][];
+        public CellPlaybackInfo[][] m_C_PBKT = new CellPlaybackInfo[IfoData.MAX_PGC][];
 
         // Compiled list of menu and title cells
         public CArray<ADT_CELL_LIST> m_AADT_Cell_list = new();
@@ -29,7 +29,7 @@ namespace PgcDemuxCS
     /// <summary>
     /// Reads required information about the specified IFO
     /// </summary>
-    internal class IfoInfo
+    internal class IfoData
     {
         internal const int MAXLENGTH = 20 * 1024 * 1024;
         internal const int MAX_PGC = 32768;
@@ -75,7 +75,7 @@ namespace PgcDemuxCS
         public readonly int VtsNumber;
         public bool IsVMG => VtsNumber == 0; // TODO replace m_bVMGM
 
-        public IfoInfo(IIfoFileReader reader, PgcDemuxOptions options)
+        public IfoData(IIfoFileReader reader, PgcDemuxOptions options)
         {
             string csAux, csAux2;
             int i, j, k, kk, nCell, nVIDs;

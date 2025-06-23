@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace PgcDemuxCS
 {
-    public class PgcDemuxOptions
+    internal class PgcDemuxOptions
     {
         /// <summary>
         /// The selected PGC to demux. Only works in PGC mode.
@@ -73,14 +73,14 @@ namespace PgcDemuxCS
         /// <summary>
         /// Extracts the audio stream to it's own file
         /// </summary>
-        public bool ExtractAudioStream = false;
-        internal bool m_bCheckAud => ExtractAudioStream;
+        public int ExtractAudioStream = -1;
+        internal int m_bCheckAud => ExtractAudioStream;
 
         /// <summary>
         /// Extracts the subtitle stream to it's own file
         /// </summary>
-        public bool ExtractSubtitleStream = false;
-        internal bool m_bCheckSub => ExtractSubtitleStream;
+        public int ExtractSubtitleStream = -1;
+        internal int m_bCheckSub => ExtractSubtitleStream;
 
 
 
