@@ -1,4 +1,5 @@
 using PgcDemuxCS;
+using PgcDemuxCS.DVD;
 using PgcDemuxCS.DVD.IfoTypes.Common;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -11,6 +12,7 @@ namespace PgcDemuxCS
         internal const int MODUPDATE = 100;
         internal const int MAXLOOKFORAUDIO = 10000;
         internal IIfoFileReader FileReader;
+        Action<double>? progressCallback = null;
 
         private static Ref<byte> pcmheader = new ByteArrayRef(new byte[]{
         0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x41, 0x56, 0x45, 0x66, 0x6D, 0x74, 0x20,
@@ -50,8 +52,9 @@ namespace PgcDemuxCS
             this.FileInfo = new IfoData(FileReader, this.Options); // Read IFO data
         }
 
-        internal bool Run()
+        internal bool Run(Action<double>? progressCallback = null)
         {
+            this.progressCallback = progressCallback;
             if (Options.m_iMode == ModeType.PGC)
             {
                 // Check if PGC exists is done in PgcDemux
@@ -141,9 +144,32 @@ namespace PgcDemuxCS
         private PgcDemuxOptions Options;
         private IfoData FileInfo;
 
-        public virtual void UpdateProgress(object pDlg, int nPerc)
+        public virtual void UpdateProgress(object pDlg, double nPerc)
         {
-            // TODO update progress
+            progressCallback?.Invoke(nPerc);
+        }
+
+        public long GetPgcBytes()
+        {
+            int nPGC = Options.m_nSelPGC;
+            DomainInfo domainInfo = (Options.m_iDomain == DomainType.Menus) ? FileInfo.MenuInfo : FileInfo.TitleInfo;
+            if (nPGC >= domainInfo.m_nPGCs)
+            {
+                Util.MyErrorBox("Error: PGC does not exist");
+                return 0;
+            }
+
+            IniDemuxGlobalVars();
+
+            // Calculate  the total number of sectors
+            var iArraysize = domainInfo.m_AADT_Cell_list.GetSize();
+            IEnumerable<CellID> cells = GetPgcCells(nPGC, domainInfo);
+            if (Options.m_iDomain == DomainType.Titles)
+            {
+                cells = cells.SelectAngle(nPGC, Options.m_nSelAng, domainInfo);
+            }
+
+            return cells.Sum(x => x.Size) * DvdUtils.DVD_BLOCK_LEN;
         }
 
         public bool PgcDemux(int nPGC, object pDlg, DomainInfo domainInfo)
@@ -186,7 +212,7 @@ namespace PgcDemuxCS
                 for (i64 = 0, bMyCell = true; i64 < (cell.EndSector - cell.StartSector + 1); i64++)
                 {
                     //readpack
-                    if ((i64 % MODUPDATE) == 0) UpdateProgress(pDlg, (int)((100 * nSector) / nTotalSectors));
+                    if ((i64 % MODUPDATE) == 0) UpdateProgress(pDlg, ((double)nSector / nTotalSectors));
                     if (m_buffer.ReadFromStream(vobStream, 2048) != 2048)
                     {
                         Util.MyErrorBox("Input error: Reached end of VOB too early");
@@ -247,6 +273,44 @@ namespace PgcDemuxCS
             return true;
         }
 
+        public long GetVidBytes()
+        {
+            // Look for nSelVid
+            int nSelVid = -1;
+            DomainInfo domainInfo = (Options.m_iDomain == DomainType.Titles) ? FileInfo.TitleInfo : FileInfo.MenuInfo;
+
+            for (int k = 0; k < domainInfo.m_AADT_Vid_list.GetSize(); k++)
+            {
+                if (domainInfo.m_AADT_Vid_list[k].VID == Options.m_nVid)
+                {
+                    nSelVid = k;
+                    break;
+                }
+            }
+
+            if (nSelVid == -1)
+            {
+                Util.MyErrorBox("Selected Vid not found!");
+                return 0;
+            }
+
+            var nVid = nSelVid;
+
+            if (nVid >= domainInfo.m_AADT_Vid_list.GetSize())
+            {
+                Util.MyErrorBox("Error: Selected Vid does not exist");
+                return 0;
+            }
+
+            IniDemuxGlobalVars();
+
+            int DemuxedVID = domainInfo.m_AADT_Vid_list[nVid].VID; // TODO why?? is the input the menu index, not actual VID??
+            IEnumerable<CellID> cells = GetAllCells(domainInfo).SelectVID(DemuxedVID);
+
+            // Calculate  the total number of sectors
+            return domainInfo.m_AADT_Vid_list[nVid].iSize;
+        }
+
         public bool VIDDemux(int nVid, object pDlg, DomainInfo domainInfo)
         {
             int nTotalSectors;
@@ -281,7 +345,7 @@ namespace PgcDemuxCS
                 for (i64 = 0, bMyCell = true; i64 < (cell.EndSector - cell.StartSector + 1); i64++)
                 {
                     //readpack
-                    if ((i64 % MODUPDATE) == 0) UpdateProgress(pDlg, (int)((100 * nSector) / nTotalSectors));
+                    if ((i64 % MODUPDATE) == 0) UpdateProgress(pDlg, ((double)nSector / nTotalSectors));
                     if (m_buffer.ReadFromStream(vobStream, 2048) != 2048)
                     {
 
@@ -344,6 +408,38 @@ namespace PgcDemuxCS
             return true;
         }
 
+        public long GetCidBytes()
+        {
+            // Look for nSelVid
+            CellID nSelCid = new();
+            if (Options.m_iDomain == DomainType.Titles)
+            {
+                nSelCid = GetAllCells(FileInfo.TitleInfo).SelectCID(Options.m_nVid, Options.m_nCid).FirstOrDefault(nSelCid);
+            }
+            else
+            {
+                nSelCid = GetAllCells(FileInfo.MenuInfo).SelectCID(Options.m_nVid, Options.m_nCid).FirstOrDefault(nSelCid);
+            }
+            if (nSelCid.Index == -1)
+            {
+                Util.MyErrorBox("Selected Vid/Cid not found!");
+                return 0;
+            }
+
+            CellID nCell = nSelCid;
+            DomainInfo domainInfo = (Options.m_iDomain == DomainType.Menus) ? FileInfo.MenuInfo : FileInfo.TitleInfo;
+
+            if (nCell.Index >= domainInfo.m_AADT_Cell_list.GetSize())
+            {
+                Util.MyErrorBox("Error: Selected Cell does not exist");
+                return 0;
+            }
+
+            IniDemuxGlobalVars();
+
+            return nCell.Size;
+        }
+
         public bool CIDDemux(CellID nCell, object pDlg, DomainInfo domainInfo)
         {
             int nSector;
@@ -372,7 +468,7 @@ namespace PgcDemuxCS
             for (i64 = 0, bMyCell = true; i64 < (nCell.EndSector - nCell.StartSector + 1); i64++)
             {
                 //readpack
-                if ((i64 % MODUPDATE) == 0) UpdateProgress(pDlg, (int)((100 * nSector) / nCell.Size));
+                if ((i64 % MODUPDATE) == 0) UpdateProgress(pDlg, ((double)nSector / nCell.Size));
                 if (m_buffer.ReadFromStream(vobStream, 2048) != 2048)
                 {
                     Util.MyErrorBox("Input error: Reached end of VOB too early");
