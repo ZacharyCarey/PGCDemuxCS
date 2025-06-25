@@ -679,7 +679,7 @@ namespace PgcDemuxCS
                 Util.writebuffer(buffer.AtIndex(start + 1), fsub[streamID & 0x1F], nbytes - start - 1);
             }
         }
-        public void WritePack(Ref<byte> buffer)
+        public bool WritePack(Ref<byte> buffer)
         {
             string csAux;
 
@@ -695,6 +695,7 @@ namespace PgcDemuxCS
                         csAux = $"VTS_01_0_{m_nVidout:000}.VOB";
                     csAux = Path.Combine(Options.m_csOutputPath, csAux);
                     fvob = CFILE.OpenWrite(csAux);
+                    if (fvob == null) return false;
                 }
             }
             else
@@ -703,11 +704,13 @@ namespace PgcDemuxCS
                 {
                     if (fvob != null) fvob.fclose();
                     fvob = CFILE.OpenWrite(Options.m_csOutputPath);
+                    if (fvob == null) return false;
                 }
             }
 
             if (fvob != null) Util.writebuffer(buffer, fvob, 2048);
             m_i64OutputLBA++;
+            return true;
         }
         public void CloseAndNull()
         {
@@ -947,17 +950,24 @@ namespace PgcDemuxCS
                 if ((Util.IsNav(m_buffer) && Options.m_bCheckNavPack) ||
                      (Util.IsAudio(m_buffer) && Options.m_bCheckAudioPack) ||
                      (Util.IsSubs(m_buffer) && Options.m_bCheckSubPack))
-                    WritePack(m_buffer);
+                {
+                    if (!WritePack(m_buffer)) return false;
+                }
                 else if (Util.IsVideo(m_buffer) && Options.m_bCheckVideoPack)
                 {
                     if (!Options.m_bCheckIFrame)
-                        WritePack(m_buffer);
+                    {
+                        if (!WritePack(m_buffer)) return false;
+                    }
                     else
                     {
                         //				if (nFirstRef == nPack)  
                         //					if ( ! PatchEndOfSequence(m_buffer))
                         //						WritePack (Pad_pack);
-                        if (bNewCell && nFirstRef >= nPack) WritePack(m_buffer);
+                        if (bNewCell && nFirstRef >= nPack)
+                        {
+                            if (!WritePack(m_buffer)) return false;
+                        }
                     }
                 }
 
