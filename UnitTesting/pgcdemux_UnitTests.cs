@@ -176,7 +176,7 @@ namespace UnitTesting
         private const string PgcDemuxPath = "C:\\Users\\Zack\\Downloads\\PgcDemux_1205_exe\\PgcDemux.exe";
         private const string DvdBackupPath = "C:\\Users\\Zack\\Videos";
         private const string TestCachePath = "C:\\Users\\Zack\\Downloads\\UnitTestCache\\";
-        private const bool ReadISO = true;
+        private const bool ReadISO = false;
 
         private readonly string DvdName;
         private readonly lsdvd Info;

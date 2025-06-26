@@ -90,7 +90,7 @@ namespace UnitTesting
                 {
                     string streamID;
                     var stream = FindAudioStream(audio, vts_ifo, pgc, title, out streamID);
-                    Assert.AreEqual(audio.LanguageCode, stream.LanguageCode, "Language did not match");
+                    Assert.AreEqual(audio.LanguageCode, stream.Language?.Part1 ?? "", "Language did not match");
                     Assert.AreEqual(audio.Format, GetFormat(stream), "Audio format did not match");
                     Assert.AreEqual(audio.Frequency, (uint)GetFrequency(stream), "Audio frequency did not match");
                     Assert.AreEqual(audio.Quantization, GetQuantization(stream), "Audio quantization did not match");
@@ -144,7 +144,7 @@ namespace UnitTesting
                     var subp_attr = vts_ifo.TitlesVobSubpictureAttributes[i];
 
                     var subp = expected.Subpictures.First(x => x.Index - 1 == k);
-                    Assert.AreEqual(subp.LanguageCode, string.IsNullOrWhiteSpace(subp_attr.LanguageCode) ? "xx" : subp_attr.LanguageCode);
+                    Assert.AreEqual(subp.LanguageCode, subp_attr?.Language?.Part1 ?? "xx");
                     Assert.AreEqual(subp.StreamID, $"0x{(0x20 + i):X2}");
                     k++;
                 }

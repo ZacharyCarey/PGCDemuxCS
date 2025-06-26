@@ -1,4 +1,5 @@
 
+using Iso639;
 using PgcDemuxCS.DVD;
 
 namespace PgcDemuxCS.DVD.IfoTypes.Common
@@ -58,7 +59,7 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
         /// <summary>
         /// 2 bytes
         /// </summary>
-        public readonly string LanguageCode;
+        public readonly Language? Language;
         public readonly byte LanguageExtension;
         public readonly AudioContentType ContentType;
         //public byte unknown3;
@@ -84,7 +85,19 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
             SampleFrequency = GetFrequency(bits.ReadBits<byte>(2));
             bool unknown1 = bits.ReadBit();
             Channels = (byte)(bits.ReadBits<byte>(3) + 1);
-            LanguageCode = file.ReadString(2);
+            string lang = file.ReadString(2);
+            if (string.IsNullOrWhiteSpace(lang)) this.Language = null;
+            else
+            {
+                try
+                {
+                    this.Language = Iso639.Language.FromPart1(lang);
+                }
+                catch (Exception)
+                {
+                    this.Language = null;
+                }
+            }
             LanguageExtension = bits.ReadBits<byte>(8);
             ContentType = (AudioContentType)bits.ReadBits<byte>(8);
             DvdUtils.CHECK_VALUE((byte)ContentType <= 4);

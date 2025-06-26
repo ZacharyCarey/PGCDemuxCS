@@ -1,4 +1,6 @@
 
+using Iso639;
+
 namespace PgcDemuxCS.DVD.IfoTypes.Common
 {
     /// <summary>
@@ -11,7 +13,7 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
         /// <summary>
         /// ISO639 language code
         /// </summary>
-        public readonly string LanguageCode;
+        public readonly Language? Language;
         public readonly byte LanguageExtension;
         public readonly byte MenuExistenceFlag;
         public ProgamChainInformationTable PgcTable { get; internal set; } // Gets set by pgci_ut_t
@@ -20,7 +22,18 @@ namespace PgcDemuxCS.DVD.IfoTypes.Common
         private MenuProgramChainLanguageUnit(Stream file)
         {
             // Read data
-            LanguageCode = file.ReadString(2);
+            string lang = file.ReadString(2);
+            if (string.IsNullOrWhiteSpace(lang)) this.Language = null;
+            else
+            {
+                try
+                {
+                    this.Language = Iso639.Language.FromPart1(lang);
+                } catch(Exception)
+                {
+                    this.Language = null;
+                }
+            }
             LanguageExtension = file.Read<byte>();
             MenuExistenceFlag = file.Read<byte>();
             lang_start_byte = file.Read<uint>();
